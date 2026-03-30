@@ -47,13 +47,13 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         }
         $crudControllerFqcn = $crud->getControllerFqcn();
 
-        if (null === $crudControllerFqcn) {
+        if (null === $crudControllerFqcn || !is_a($crudControllerFqcn, AbstractCrudController::class, true)) {
             return false;
         }
-        /** @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
 
         try {
             $this->exportConfigFactory->create($crudControllerFqcn);
+
             return true;
         } catch (Throwable) {
             return false;
@@ -74,10 +74,10 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         }
         $crudControllerFqcn = $crud->getControllerFqcn();
 
-        if (null === $crudControllerFqcn) {
+        if (null === $crudControllerFqcn || !is_a($crudControllerFqcn, AbstractCrudController::class, true)) {
             return;
         }
-        /** @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
+        /* @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
 
         try {
             $config = $this->exportConfigFactory->create($crudControllerFqcn);
