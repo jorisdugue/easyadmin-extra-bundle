@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace JorisDugue\EasyAdminExtraBundle\Controller;
 
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
+use EasyCorp\Bundle\EasyAdminBundle\Contracts\Controller\DashboardControllerInterface;
+use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Factory\AdminContextFactory;
+use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\ExportManager;
+use ReflectionException;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,26 +27,43 @@ final class AdminExportController extends AbstractController
         private readonly DashboardResolver $dashboardResolver,
     ) {}
 
+    /**
+     * Builds a fresh EasyAdmin context for the targeted dashboard and CRUD controller,
+     * then delegates the export generation to the export manager.
+     *
+     * @throws ReflectionException
+     */
     public function __invoke(Request $request): Response
     {
-        $crudControllerFqcn = (string) $request->attributes->get('_jd_ea_extra_crud', '');
-        $dashboardControllerFqcn = (string) $request->attributes->get('_jd_ea_extra_dashboard', '');
-        $format = (string) $request->attributes->get('_jd_ea_extra_format', '');
+        $rawCrudControllerFqcn = $request->attributes->get('_jd_ea_extra_crud', '');
+        $rawDashboardControllerFqcn = $request->attributes->get('_jd_ea_extra_dashboard', '');
+        $rawFormat = $request->attributes->get('_jd_ea_extra_format', '');
 
-        if ('' === $crudControllerFqcn) {
-            throw $this->createNotFoundException("Aucun CRUD controller fourni pour l'export.");
+        if (!\is_string($rawCrudControllerFqcn) || '' === trim($rawCrudControllerFqcn)) {
+            throw $this->createNotFoundException('No CRUD controller was provided for export.');
         }
 
-        if ('' === $format) {
-            throw new RuntimeException("Aucun format fournis pour l'export");
+        if (!\is_string($rawDashboardControllerFqcn) || '' === trim($rawDashboardControllerFqcn)) {
+            throw $this->createNotFoundException('No dashboard controller was provided for export.');
         }
+
+        if (!\is_string($rawFormat) || '' === trim($rawFormat)) {
+            throw new RuntimeException('No export format was provided.');
+        }
+        /** @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
+        $crudControllerFqcn = trim($rawCrudControllerFqcn);
+        /** @var class-string<DashboardControllerInterface> $dashboardControllerFqcn */
+        $dashboardControllerFqcn = trim($rawDashboardControllerFqcn);
+        $format = ExportFormat::normalize($rawFormat);
+
+        $crudAction = $request->attributes->get(EA::CRUD_ACTION);
         // Force to build a new contexte of EA or this will be not working
         $context = $this->adminContextFactory->create(
             $request,
             $this->dashboardResolver->resolve($dashboardControllerFqcn),
             $this->controllerResolver->resolve($crudControllerFqcn),
             // Force here for contexte datas
-            $request->attributes->get(EA::CRUD_ACTION)
+            $crudAction
         );
         $request->attributes->set(EA::CONTEXT_REQUEST_ATTRIBUTE, $context);
 

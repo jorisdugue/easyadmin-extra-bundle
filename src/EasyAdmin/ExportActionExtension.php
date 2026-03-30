@@ -9,6 +9,9 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Contracts\Action\ActionsExtensionInterface;
+use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
+use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
@@ -32,6 +35,9 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         private AuthorizationCheckerInterface $authorizationChecker,
     ) {}
 
+    /**
+     * @param AdminContext<object> $context
+     */
     public function supports(AdminContext $context): bool
     {
         $crud = $context->getCrud();
@@ -39,10 +45,15 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         if (null === $crud || Crud::PAGE_INDEX !== $crud->getCurrentPage()) {
             return false;
         }
+        $crudControllerFqcn = $crud->getControllerFqcn();
+
+        if (null === $crudControllerFqcn) {
+            return false;
+        }
+        /** @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
 
         try {
-            $this->exportConfigFactory->create($crud->getControllerFqcn());
-
+            $this->exportConfigFactory->create($crudControllerFqcn);
             return true;
         } catch (Throwable) {
             return false;
@@ -50,6 +61,8 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
     }
 
     /**
+     * @param AdminContext<object> $context
+     *
      * @throws ReflectionException
      */
     public function extend(Actions $actions, AdminContext $context): void
@@ -59,9 +72,15 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         if (null === $crud) {
             return;
         }
+        $crudControllerFqcn = $crud->getControllerFqcn();
+
+        if (null === $crudControllerFqcn) {
+            return;
+        }
+        /** @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
 
         try {
-            $config = $this->exportConfigFactory->create($crud->getControllerFqcn());
+            $config = $this->exportConfigFactory->create($crudControllerFqcn);
         } catch (Throwable) {
             return;
         }
@@ -76,15 +95,11 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         }
         $dashboardRouteName = $context->getDashboardRouteName();
         $crudRouteName = $this->exportRouteMetadataResolver->resolveRouteName(
-            $crud->getControllerFqcn(),
+            $crudControllerFqcn,
             $config
         );
-        $currentQuery = $request?->query->all() ?? [];
-        $formats = [
-            'csv' => ['action' => 'jdExportCsv', 'label' => $config->csvLabel],
-            'xlsx' => ['action' => 'jdExportXlsx', 'label' => $config->xlsxLabel],
-            'json' => ['action' => 'jdExportJson', 'label' => $config->jsonLabel],
-        ];
+        $currentQuery = $request->query->all();
+        $formats = $this->getFormatDefinitions($config);
 
         foreach ($formats as $format => $definition) {
             if (!$config->supportsFormat($format)) {
@@ -100,5 +115,17 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
                     ->createAsGlobalAction()
             );
         }
+    }
+
+    /**
+     * @return array<string, array{action: string, label: string}>
+     */
+    private function getFormatDefinitions(ExportConfig $config): array
+    {
+        return [
+            ExportFormat::CSV => ['action' => 'jdExportCsv', 'label' => $config->csvLabel],
+            ExportFormat::XLSX => ['action' => 'jdExportXlsx', 'label' => $config->xlsxLabel],
+            ExportFormat::JSON => ['action' => 'jdExportJson', 'label' => $config->jsonLabel],
+        ];
     }
 }

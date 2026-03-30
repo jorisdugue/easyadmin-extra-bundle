@@ -240,8 +240,6 @@ allowSpreadsheetFormulas: true
 * [ ] Bulk actions
 * [ ] Virtual / computed fields
 * [ ] Role-based field visibility
-* [ ] Async exports (queue support)
-* [ ] Export profiles
 
 ---
 

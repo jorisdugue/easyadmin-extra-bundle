@@ -4,10 +4,20 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Trait;
 
-use InvalidArgumentException;
+use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportFieldDto;
 use JorisDugue\EasyAdminExtraBundle\Field\ExportFieldOption;
 
+/**
+ * Provides helpers to control field visibility and labeling per export format.
+ *
+ * Supported formats are defined in {@see ExportFormat}.
+ *
+ * Behavior:
+ * - If visible formats are set, the field is only shown on those formats
+ * - If hidden formats are set, the field is excluded from those formats
+ * - If both are set, hidden formats take precedence
+ */
 trait ExportFieldFormatTrait
 {
     abstract public function setCustomOption(string $name, mixed $value): static;
@@ -23,7 +33,7 @@ trait ExportFieldFormatTrait
     {
         return $this->setCustomOption(
             ExportFieldOption::VISIBLE_FORMATS,
-            $this->normalizeFormats($formats)
+            ExportFormat::normalizeMany($formats)
         );
     }
 
@@ -36,12 +46,12 @@ trait ExportFieldFormatTrait
     {
         return $this->setCustomOption(
             ExportFieldOption::HIDDEN_FORMATS,
-            $this->normalizeFormats($formats)
+            ExportFormat::normalizeMany($formats)
         );
     }
 
     /**
-     * Adds a single allowed export format.
+     * Restricts the field to a single export format.
      */
     public function onlyOnFormat(string $format): static
     {
@@ -49,7 +59,7 @@ trait ExportFieldFormatTrait
     }
 
     /**
-     * Adds a single hidden export format.
+     * Hides the field on a single export format.
      */
     public function hideOnFormat(string $format): static
     {
@@ -57,7 +67,7 @@ trait ExportFieldFormatTrait
     }
 
     /**
-     * Alias for onlyOnFormat(), useful for fluent readability.
+     * Alias for onlyOnFormat(), improves readability in some contexts.
      */
     public function showOnFormat(string $format): static
     {
@@ -65,12 +75,23 @@ trait ExportFieldFormatTrait
     }
 
     /**
+     * Alias for onlyOnFormats(), improves readability in some contexts.
+     *
+     * @param list<string> $formats
+     */
+    public function showOnFormats(array $formats): static
+    {
+        return $this->onlyOnFormats($formats);
+    }
+
+    /**
      * Defines a custom label for a specific export format.
      */
     public function setLabelForFormat(string $format, string $label): static
     {
-        $format = $this->normalizeFormat($format);
+        $format = ExportFormat::normalize($format);
 
+        /** @var array<string, string>|mixed $labels */
         $labels = $this->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS);
 
         if (!\is_array($labels)) {
@@ -89,37 +110,12 @@ trait ExportFieldFormatTrait
      */
     public function setLabelsForFormats(array $labels): static
     {
-        return array_reduce(
-            array_keys($labels),
-            static fn ($field, $format) => $field->setLabelForFormat($format, $labels[$format]),
-            $this
-        );
-    }
+        $field = $this;
 
-    /**
-     * @param list<string> $formats
-     *
-     * @return list<string>
-     */
-    private function normalizeFormats(array $formats): array
-    {
-        $normalized = [];
-
-        foreach ($formats as $format) {
-            $normalized[] = $this->normalizeFormat($format);
+        foreach ($labels as $format => $label) {
+            $field = $field->setLabelForFormat($format, $label);
         }
 
-        return array_values(array_unique($normalized));
-    }
-
-    private function normalizeFormat(string $format): string
-    {
-        $format = strtolower(trim($format));
-
-        if ('' === $format) {
-            throw new InvalidArgumentException('Export format cannot be empty.');
-        }
-
-        return $format;
+        return $field;
     }
 }

@@ -13,12 +13,17 @@ use ReflectionException;
 final class ExportRouteMetadataResolver
 {
     /**
+     * @param class-string $crudControllerFqcn
+     *
      * @throws ReflectionException
      */
     public function resolveRouteName(string $crudControllerFqcn, ExportConfig $config): string
     {
-        if (null !== $config->routeName && '' !== trim($config->routeName)) {
-            return trim($config->routeName);
+        if (null !== $config->routeName) {
+            $routeName = trim($config->routeName);
+            if ('' !== $routeName) {
+                return $routeName;
+            }
         }
 
         $reflection = new ReflectionClass($crudControllerFqcn);
@@ -28,8 +33,11 @@ final class ExportRouteMetadataResolver
             /** @var AdminRoute $adminRoute */
             $adminRoute = $attributes[0]->newInstance();
 
-            if ('' !== trim($adminRoute->name)) {
-                return trim($adminRoute->name);
+            if (null !== $adminRoute->name) {
+                $routeName = trim($adminRoute->name);
+                if ('' !== $routeName) {
+                    return $routeName;
+                }
             }
         }
 
@@ -37,12 +45,17 @@ final class ExportRouteMetadataResolver
     }
 
     /**
+     * @param class-string $crudControllerFqcn
+     *
      * @throws ReflectionException
      */
     public function resolveRoutePath(string $crudControllerFqcn, ExportConfig $config): string
     {
-        if (null !== $config->routePath && '' !== trim($config->routePath)) {
-            return '/' . ltrim(trim($config->routePath), '/');
+        if (null !== $config->routePath) {
+            $routePath = trim($config->routePath);
+            if ('' !== $routePath) {
+                return '/' . ltrim($routePath, '/');
+            }
         }
 
         $reflection = new ReflectionClass($crudControllerFqcn);
@@ -51,9 +64,11 @@ final class ExportRouteMetadataResolver
         if ([] !== $attributes) {
             /** @var AdminRoute $adminRoute */
             $adminRoute = $attributes[0]->newInstance();
-
-            if ('' !== trim($adminRoute->path)) {
-                return '/' . ltrim(trim($adminRoute->path), '/');
+            if (null !== $adminRoute->name) {
+                $routePath = trim($adminRoute->name);
+                if ('' !== $routePath) {
+                    return '/' . ltrim(trim($routePath), '/');
+                }
             }
         }
 

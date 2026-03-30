@@ -14,6 +14,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Factory\FilterFactory;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
+use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
@@ -47,6 +48,8 @@ final readonly class ExportManager
     ) {}
 
     /**
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     *
      * @throws ReflectionException
      */
     public function export(string $crudControllerFqcn, string $format, Request $request): Response
@@ -80,9 +83,9 @@ final readonly class ExportManager
         );
 
         return match ($format) {
-            'csv' => $this->csvExporter->export($payload),
-            'xlsx' => $this->xlsxExporter->export($payload),
-            'json' => $this->jsonExporter->export($payload),
+            ExportFormat::CSV => $this->csvExporter->export($payload),
+            ExportFormat::XLSX => $this->xlsxExporter->export($payload),
+            ExportFormat::JSON => $this->jsonExporter->export($payload),
             default => throw new InvalidArgumentException(\sprintf('Le format "%s" n\'est pas supporté.', $format)),
         };
     }
@@ -147,6 +150,9 @@ final readonly class ExportManager
         );
     }
 
+    /**
+     * @param AbstractCrudController<object> $crudController
+     */
     private function createAllQueryBuilder(AbstractCrudController $crudController, Request $request): QueryBuilder
     {
         if (method_exists($crudController, 'createExportAllQueryBuilder')) {
@@ -161,7 +167,7 @@ final readonly class ExportManager
             return $this->stripPagination($qb);
         }
 
-        /** @var AdminContext|null $context */
+        /** @var AdminContext<object>|null $context */
         $context = $request->attributes->get(EA::CONTEXT_REQUEST_ATTRIBUTE);
         if (null === $context) {
             throw new RuntimeException('Unable to build a full export without an EasyAdmin request context.');
@@ -172,12 +178,17 @@ final readonly class ExportManager
             throw new RuntimeException('Unable to build a full export because the EasyAdmin search context is missing.');
         }
 
+        $crud = $context->getCrud();
+        if (null === $crud) {
+            throw new RuntimeException('Unable to build a full export because the EasyAdmin CRUD context is missing.');
+        }
+
         $fields = $this->collectionFactoryCompat->createFieldCollection(
             $crudController->configureFields(Crud::PAGE_INDEX)
         );
 
         $filters = $this->filterFactory->create(
-            $context->getCrud()->getFiltersConfig(),
+            $crud->getFiltersConfig(),
             $fields,
             $context->getEntity()
         );
@@ -194,9 +205,12 @@ final readonly class ExportManager
         return $this->stripPagination($qb);
     }
 
+    /**
+     * @param AbstractCrudController<object> $crudController
+     */
     private function createContextQueryBuilder(AbstractCrudController $crudController, Request $request): QueryBuilder
     {
-        /** @var AdminContext|null $context */
+        /** @var AdminContext<object>|null $context */
         $context = $request->attributes->get(EA::CONTEXT_REQUEST_ATTRIBUTE);
         if (null === $context) {
             throw new RuntimeException('Unable to build a context export without an EasyAdmin request context.');
@@ -207,12 +221,17 @@ final readonly class ExportManager
             throw new RuntimeException('Unable to build a context export without an EasyAdmin search context.');
         }
 
+        $crud = $context->getCrud();
+
+        if (null === $crud) {
+            throw new RuntimeException('Unable to build a context export because the EasyAdmin CRUD context is missing.');
+        }
         $fields = $this->collectionFactoryCompat->createFieldCollection(
             $crudController->configureFields(Crud::PAGE_INDEX)
         );
 
         $filters = $this->filterFactory->create(
-            $context->getCrud()->getFiltersConfig(),
+            $crud->getFiltersConfig(),
             $fields,
             $context->getEntity()
         );
@@ -243,6 +262,8 @@ final readonly class ExportManager
     }
 
     /**
+     * @param AbstractCrudController<object> $crudController
+     *
      * @throws ReflectionException
      */
     private function guessEntityName(AbstractCrudController $crudController): string

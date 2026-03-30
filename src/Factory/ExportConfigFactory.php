@@ -4,14 +4,23 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Factory;
 
+use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
 use ReflectionClass;
+use ReflectionException;
 use RuntimeException;
 
 class ExportConfigFactory
 {
+    /**
+     * Creates an export configuration from a CRUD controller class or instance.
+     *
+     * @param object|class-string<AbstractCrudController<object>> $crudController
+     *
+     * @throws ReflectionException
+     */
     public function create(object|string $crudController): ExportConfig
     {
         $controllerFqcn = \is_object($crudController) ? $crudController::class : $crudController;
@@ -19,11 +28,11 @@ class ExportConfigFactory
         $attributes = $reflection->getAttributes(AdminExport::class);
 
         if ([] === $attributes) {
-            throw new RuntimeException(\sprintf('Le CRUD "%s" doit déclarer l\'attribut #[AdminExport].', $controllerFqcn));
+            throw new RuntimeException(\sprintf('The CRUD controller "%s" must declare the #[AdminExport] attribute.', $controllerFqcn));
         }
 
         if (!is_subclass_of($controllerFqcn, ExportFieldsProviderInterface::class)) {
-            throw new RuntimeException(\sprintf('Le CRUD "%s" doit implémenter %s.', $controllerFqcn, ExportFieldsProviderInterface::class));
+            throw new RuntimeException(\sprintf('The CRUD controller "%s" must implement %s.', $controllerFqcn, ExportFieldsProviderInterface::class));
         }
 
         /** @var AdminExport $attribute */
