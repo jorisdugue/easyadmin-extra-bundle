@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+namespace JorisDugue\EasyAdminExtraBundle\Attribute;
+
+use Attribute;
+
+#[Attribute(Attribute::TARGET_CLASS)]
+final readonly class AdminExport
+{
+    /**
+     * @param list<string> $formats
+     */
+    public function __construct(
+        public string $filename = 'export_{date}_{time}',
+        public array $formats = ['csv'],
+        public bool $fullExport = true,
+        public bool $filteredExport = true,
+        public ?int $maxRows = 50000,
+        public ?string $requiredRole = null,
+        public string $csvLabel = 'Export CSV',
+        public string $xlsxLabel = 'Export Excel',
+        public string $jsonLabel = 'Export JSON',
+        /**
+         * Whether spreadsheet formulas should be allowed in exported files.
+         *
+         * When disabled (default), values starting with '=', '+', '-', or '@'
+         * are sanitized to prevent spreadsheet formula injection.
+         *
+         * Enable this only if you fully trust the exported data.
+         */
+        public bool $allowSpreadsheetFormulas = false,
+        public ?string $routeName = null,
+        public ?string $routePath = null,
+    ) {}
+}

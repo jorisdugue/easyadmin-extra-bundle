@@ -1,0 +1,72 @@
+{
+  "name": "jorisdugue/easyadmin-extra-bundle",
+  "description": "Advanced data tools for EasyAdmin 5, including exports, security helpers, and future bulk operations.",
+  "type": "symfony-bundle",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Joris Dugué",
+      "homepage": ""
+    }
+  ],
+  "keywords": [
+    "symfony",
+    "easyadmin",
+    "easyadmin-bundle",
+    "bundle",
+    "backoffice",
+    "admin",
+    "export",
+    "csv",
+    "xlsx",
+    "json",
+    "bulk",
+    "security",
+    "gdpr"
+  ],
+  "require": {
+    "php": ">=8.4",
+    "easycorp/easyadmin-bundle": "^5.0",
+    "phpoffice/phpspreadsheet": "^5.0",
+    "symfony/framework-bundle": "^7.3 || ^8.0",
+    "symfony/property-access": "^7.3 || ^8.0",
+    "symfony/security-core": "^7.3 || ^8.0",
+    "symfony/security-bundle": "^7.3 || ^8.0",
+    "symfony/http-foundation": "^7.3 || ^8.0",
+    "symfony/dependency-injection": "^7.3 || ^8.0",
+    "symfony/config": "^7.3 || ^8.0",
+    "symfony/http-kernel": "^7.3 || ^8.0",
+    "symfony/routing": "^7.3 || ^8.0",
+    "symfony/finder": "^7.3 || ^8.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "JorisDugue\\EasyAdminExtraBundle\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "JorisDugue\\EasyAdminExtraBundle\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "symfony": {
+      "bundle": "JorisDugue\\EasyAdminExtraBundle\\JorisDugueEasyAdminExtraBundle"
+    }
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.94",
+    "phpunit/phpunit": "^13.0"
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit",
+    "cs:check": "vendor/bin/php-cs-fixer fix --dry-run --diff --verbose",
+    "cs:fix": "vendor/bin/php-cs-fixer fix --verbose"
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "php-http/discovery": true
+    }
+  }
+}
