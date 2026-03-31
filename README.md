@@ -5,20 +5,38 @@
 ![EasyAdmin](https://img.shields.io/badge/EasyAdmin-5-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Advanced data tools for EasyAdmin 5 (Symfony 8, PHP 8.4+, PHP 8.5 ready)
+Export and data safety tools for EasyAdmin 5 (Symfony 8, PHP 8.4+, PHP 8.5 ready)
 
 ---
 
 ## 🧠 Overview
 
-EasyAdmin Extra Bundle extends EasyAdmin with advanced data handling capabilities:
+EasyAdmin Extra Bundle extends EasyAdmin with **advanced export capabilities and data control tools**, while staying fully aligned with its ecosystem.
 
-* 📤 **Data export** (CSV, XLSX, JSON)
-* ⚙️ **Bulk operations** *(coming soon)*
-* 🔒 **Security & compliance tools**
-* 🧩 **Field-level transformations**
+It provides:
 
-It is designed as a **non-intrusive extension** of EasyAdmin, keeping full compatibility with its ecosystem.
+* 📤 Structured data exports (CSV, XLSX, JSON)
+* 🔒 Strong security defaults (GDPR-friendly)
+* 🧩 Independent export field system
+* ⚙️ High performance (streaming, large datasets)
+
+---
+
+## 🎯 Core Idea
+
+EasyAdmin fields describe the **admin UI**.
+
+Export fields describe the **export contract**.
+
+These two layers are intentionally independent.
+
+This allows you to:
+
+* export fields not displayed in EasyAdmin
+* compute custom values at export time
+* apply masking and transformations only for export
+* control column order independently
+* keep your admin UI simple while exposing richer data externally
 
 ---
 
@@ -29,7 +47,7 @@ EasyAdmin is great for CRUD operations, but real-world backoffices often need mo
 * exporting large datasets safely
 * masking sensitive data (GDPR, finance, healthcare…)
 * applying transformations at export time
-* handling bulk operations efficiently
+* handling large datasets efficiently
 
 👉 This bundle focuses on **data control, safety, and developer ergonomics**.
 
@@ -42,15 +60,11 @@ EasyAdmin is great for CRUD operations, but real-world backoffices often need mo
 * CSV (streamed, memory efficient)
 * XLSX (spreadsheet export)
 * JSON export
-* Full or filtered export (EasyAdmin context-aware)
-* Custom filename
+* Full export or filtered export (EasyAdmin context-aware)
+* Custom filename support
 * Configurable max rows
 * Field-level transformations
-* Built-in masking:
-
-    * `mask()`
-    * `redact()`
-    * `partialMask()`
+* Custom export schema (independent from EasyAdmin fields)
 
 ---
 
@@ -60,24 +74,28 @@ EasyAdmin is great for CRUD operations, but real-world backoffices often need mo
 * Safe defaults (formulas disabled by default)
 * Role-based access control (`requiredRole`)
 * Opt-in export via attribute
-* Sanitization of all exported values
+* Full sanitization of exported values
+* Built-in masking:
+
+  * `mask()`
+  * `redact()`
+  * `partialMask()`
 
 ---
 
-### ⚙️ Bulk operations *(coming soon)*
+### ⚡ Performance
 
-Planned features:
-
-* Select multiple rows directly in EasyAdmin
-* Apply batch actions (update, delete, custom logic)
-* Custom workflows for bulk processing
+* CSV exports are streamed (`php://output`)
+* Uses Doctrine `toIterable()` (no full dataset in memory)
+* Optional EntityManager clearing
+* Designed for large datasets
 
 ---
 
 ### 🧩 Developer Experience
 
 * Attribute-based configuration (`#[AdminExport]`)
-* Custom export field system
+* Independent export field system
 * Transformers & formatters
 * Extensible architecture
 
@@ -114,52 +132,99 @@ class UserCrudController extends AbstractCrudController
 
 ## 🧩 Export Fields
 
-Customize how your data is exported:
+Define your export schema independently from EasyAdmin:
 
 ```php
-use JorisDugue\EasyAdminExtraBundle\Field\ExportField;
+use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
+use JorisDugue\EasyAdminExtraBundle\Field\TextExportField;
+use JorisDugue\EasyAdminExtraBundle\Field\DateTimeExportField;
 
-ExportField::new('email')
-    ->mask();
-
-ExportField::new('phone')
-    ->partialMask(2, 2);
-
-ExportField::new('salary')
-    ->formatCurrency('EUR');
+class UserCrudController extends AbstractCrudController implements ExportFieldsProviderInterface
+{
+    public static function getExportFields(): array
+    {
+        return [
+            TextExportField::new('email', 'Email'),
+            TextExportField::new('phone')->partialMask(2, 2),
+            DateTimeExportField::new('createdAt', 'Created at'),
+        ];
+    }
+}
 ```
 
 ---
 
-### Available field features
+## ⚡ Advanced Usage
 
-* `mask(string $replacement = '***')`
-* `redact()`
-* `partialMask(int $visibleStart, int $visibleEnd)`
-* `format(...)`
-* `transformer(callable $callback)`
+### Custom computed values
+
+```php
+TextExportField::new('fullName')
+    ->setTransformer(fn ($value, $entity) =>
+        $entity->getFirstName().' '.$entity->getLastName()
+    );
+```
 
 ---
 
-## 🖼️ Example output
+### Conditional fallback
 
-### CSV (safe)
-
-```csv
-email,phone,salary
-***,12****89,€2,500.00
+```php
+->setTransformer(fn ($value) => $value ?? 'N/A');
 ```
 
-### JSON
+---
 
-```json
-[
-  {
-    "email": "***",
-    "phone": "12****89",
-    "salary": "€2500"
-  }
-]
+### GDPR / masking
+
+```php
+TextExportField::new('email')->mask();
+TextExportField::new('phone')->partialMask(2, 2);
+```
+
+---
+
+### Field ordering
+
+By default, fields are exported in declaration order.
+
+You can override this using `position()`:
+
+```php
+TextExportField::new('email')->position(10);
+TextExportField::new('name')->position(5);
+```
+
+Fields with a defined position are sorted first, then remaining fields keep their declaration order.
+
+---
+
+## 🔗 EasyAdmin Integration
+
+This bundle integrates directly with EasyAdmin:
+
+* automatically uses current filters
+* respects search queries
+* respects sorting
+* works directly with CRUD controllers
+* no manual query handling required
+
+👉 Export reflects the current admin context.
+
+---
+
+## 🧠 How it works
+
+```
+EasyAdmin CRUD
+    ↓
+Filters / Search / QueryBuilder
+    ↓
+Export Engine
+    ↓
+Export Fields (custom schema)
+    ↓
+Output (CSV / XLSX / JSON)
 ```
 
 ---
@@ -178,9 +243,9 @@ email,phone,salary
 
 ### Spreadsheet formula injection
 
-By default, all exports are protected against spreadsheet formula injection.
+By default, all exports are protected.
 
-If you enable formulas:
+To allow formulas:
 
 ```php
 allowSpreadsheetFormulas: true
@@ -196,33 +261,25 @@ allowSpreadsheetFormulas: true
 * XLSX uses more memory
 * Automatic `COUNT(*)` may fail with:
 
-    * `GROUP BY`
-    * `HAVING`
-    * `DISTINCT`
+  * `GROUP BY`
+  * `HAVING`
+  * `DISTINCT`
 * Complex queries may require custom handling
-
----
-
-## 🚀 Performance
-
-* CSV exports are streamed (`php://output`)
-* Uses Doctrine `toIterable()` (no full dataset in memory)
-* Optional EntityManager clearing
-* Configurable row limits
 
 ---
 
 ## 🔍 Comparison
 
-| Feature            | Native EasyAdmin | This Bundle |
-|--------------------|------------------|-------------|
-| Export             | ❌                | ✅           |
-| CSV streaming      | ❌                | ✅           |
-| XLSX export        | ❌                | ✅           |
-| JSON export        | ❌                | ✅           |
-| Data masking       | ❌                | ✅           |
-| Formula protection | ❌                | ✅           |
-| Bulk actions       | ❌                | 🚧          |
+| Feature              | Native EasyAdmin | This Bundle |
+|----------------------|------------------|-------------|
+| Export               | ❌                | ✅           |
+| CSV streaming        | ❌                | ✅           |
+| XLSX export          | ❌                | ✅           |
+| JSON export          | ❌                | ✅           |
+| Data masking         | ❌                | ✅           |
+| Formula protection   | ❌                | ✅           |
+| Custom export schema | ❌                | ✅           |
+| Bulk actions         | ❌                | 🚧          |
 
 ---
 
@@ -238,8 +295,9 @@ allowSpreadsheetFormulas: true
 ## 🛣️ Roadmap
 
 * [ ] Bulk actions
-* [ ] Virtual / computed fields
+* [ ] Export presets / profiles
 * [ ] Role-based field visibility
+* [ ] Additional field helpers
 
 ---
 
