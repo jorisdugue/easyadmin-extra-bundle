@@ -22,6 +22,9 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
  *
  * ```yaml
  * joris_dugue_easyadmin_extra:
+ *   export:
+ *     action_display: dropdown
+ *
  *   discovery_paths:
  *     - '%kernel.project_dir%/src/Controller'
  *     - '%kernel.project_dir%/src/Admin'
@@ -46,43 +49,36 @@ final class Configuration implements ConfigurationInterface
 {
     /**
      * Builds the configuration tree for the bundle.
-     *
-     * @return TreeBuilder The configuration tree builder
      */
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('joris_dugue_easyadmin_extra');
 
-        $treeBuilder->getRootNode()
-            ->children()
+        $rootNode = $treeBuilder->getRootNode();
 
-            /*
-             * Defines the directories where the bundle will scan for PHP classes.
-             *
-             * These directories are used to:
-             * - Discover EasyAdmin dashboards (#[AdminDashboard])
-             * - Discover CRUD controllers with export enabled (#[AdminExport])
-             *
-             * Important:
-             * - Must be a flat list of strings (absolute or parameter-based paths)
-             * - Each path should point to a directory
-             *
-             * Default:
-             * - "%kernel.project_dir%/src/Controller"
-             *
-             * Recommended usages:
-             * - Custom admin folder: "src/Admin"
-             * - Modular architecture: "modules/"
-             * - Domain-driven structure
-             */
+        $rootNode
+            ->children()
+            ->arrayNode('export')
+            ->addDefaultsIfNotSet()
+            ->children()
+            ->enumNode('action_display')
+            ->values(['buttons', 'dropdown'])
+            ->defaultValue('buttons')
+            ->end()
+            ->end()
+            ->end()
             ->arrayNode('discovery_paths')
             ->scalarPrototype()->end()
             ->defaultValue([
                 '%kernel.project_dir%/src/Controller',
             ])
             ->validate()
-            ->ifTrue(static fn ($paths) => [] !== array_filter($paths, static fn ($p) => !\is_string($p)))
+            ->ifTrue(static fn (mixed $paths): bool => [] !== array_filter(
+                $paths,
+                static fn (mixed $path): bool => !\is_string($path)
+            ))
             ->thenInvalid('The "discovery_paths" option must be a list of strings.')
+            ->end()
             ->end()
             ->end();
 

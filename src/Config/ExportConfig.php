@@ -6,6 +6,7 @@ namespace JorisDugue\EasyAdminExtraBundle\Config;
 
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
+use JorisDugue\EasyAdminExtraBundle\Enum\ExportActionDisplay;
 
 final readonly class ExportConfig
 {
@@ -27,7 +28,13 @@ final readonly class ExportConfig
         public bool $allowSpreadsheetFormulas = false,
         public ?string $routeName = null,
         public ?string $routePath = null,
+        public ExportActionDisplay $actionDisplay = ExportActionDisplay::BUTTONS,
     ) {}
+
+    public function useDropdown(): bool
+    {
+        return ExportActionDisplay::DROPDOWN === $this->actionDisplay;
+    }
 
     public function supportsFormat(string $format): bool
     {

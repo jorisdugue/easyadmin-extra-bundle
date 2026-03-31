@@ -8,12 +8,15 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
+use JorisDugue\EasyAdminExtraBundle\Enum\ExportActionDisplay;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
 
 class ExportConfigFactory
 {
+    public function __construct(private readonly string $defaultActionDisplay = ExportActionDisplay::BUTTONS->value) {}
+
     /**
      * Creates an export configuration from a CRUD controller class or instance.
      *
@@ -52,6 +55,7 @@ class ExportConfigFactory
             allowSpreadsheetFormulas: $attribute->allowSpreadsheetFormulas,
             routeName: $attribute->routeName,
             routePath: $attribute->routePath,
+            actionDisplay: $attribute->actionDisplay ?? ExportActionDisplay::from($this->defaultActionDisplay),
         );
     }
 }

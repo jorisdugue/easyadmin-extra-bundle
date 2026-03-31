@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JorisDugue\EasyAdminExtraBundle\Attribute;
 
 use Attribute;
+use JorisDugue\EasyAdminExtraBundle\Enum\ExportActionDisplay;
 
 #[Attribute(Attribute::TARGET_CLASS)]
 final readonly class AdminExport
@@ -33,5 +34,6 @@ final readonly class AdminExport
         public bool $allowSpreadsheetFormulas = false,
         public ?string $routeName = null,
         public ?string $routePath = null,
+        public ?ExportActionDisplay $actionDisplay = null,
     ) {}
 }

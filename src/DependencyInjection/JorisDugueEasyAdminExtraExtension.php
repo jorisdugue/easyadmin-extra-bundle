@@ -21,7 +21,7 @@ final class JorisDugueEasyAdminExtraExtension extends Extension
         $config = $this->processConfiguration($configuration, $configs);
 
         $container->setParameter('joris_dugue_easyadmin_extra.discovery_paths', $config['discovery_paths']);
-
+        $container->setParameter('joris_dugue_easyadmin_extra.export.action_display', $config['export']['action_display']);
         $loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../../config'));
         $loader->load('services.php');
     }

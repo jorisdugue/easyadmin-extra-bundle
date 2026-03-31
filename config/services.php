@@ -30,7 +30,8 @@ return static function (ContainerConfigurator $container): void {
         ->autowire()
         ->autoconfigure();
 
-    $services->set(ExportConfigFactory::class);
+    $services->set(ExportConfigFactory::class)
+        ->arg('$defaultActionDisplay', param('joris_dugue_easyadmin_extra.export.action_display'));
     $services->set(PropertyValueReader::class);
     $services->set(CrudControllerResolver::class)
         ->arg('$container', service('service_container'));

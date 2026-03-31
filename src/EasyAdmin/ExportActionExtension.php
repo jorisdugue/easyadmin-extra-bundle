@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JorisDugue\EasyAdminExtraBundle\EasyAdmin;
 
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
+use EasyCorp\Bundle\EasyAdminBundle\Config\ActionGroup;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
@@ -12,10 +13,12 @@ use EasyCorp\Bundle\EasyAdminBundle\Contracts\Action\ActionsExtensionInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
+use JorisDugue\EasyAdminExtraBundle\Enum\ExportActionDisplay;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
 use ReflectionException;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Throwable;
@@ -93,28 +96,69 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         if (!$this->exportRequestResolver->canDisplayExportAction($config, $request)) {
             return;
         }
-        $dashboardRouteName = $context->getDashboardRouteName();
-        $crudRouteName = $this->exportRouteMetadataResolver->resolveRouteName(
-            $crudControllerFqcn,
-            $config
-        );
-        $currentQuery = $request->query->all();
-        $formats = $this->getFormatDefinitions($config);
 
-        foreach ($formats as $format => $definition) {
+        $exportActions = $this->buildExportActions($request, $context, $crudControllerFqcn, $config);
+
+        if ([] === $exportActions) {
+            return;
+        }
+
+        if (ExportActionDisplay::DROPDOWN === $config->actionDisplay) {
+            $actions->add(Crud::PAGE_INDEX, $this->buildExportDropDown($exportActions));
+
+            return;
+        }
+
+        foreach ($exportActions as $exportAction) {
+            $actions->add(Crud::PAGE_INDEX, $exportAction);
+        }
+    }
+
+    /**
+     * @param AdminContext<object> $context
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     *
+     * @return list<Action>
+     *
+     * @throws ReflectionException
+     */
+    private function buildExportActions(Request $request, AdminContext $context, string $crudControllerFqcn, ExportConfig $config): array
+    {
+        $dashboardRouteName = $context->getDashboardRouteName();
+        $crudRouteName = $this->exportRouteMetadataResolver->resolveRouteName($crudControllerFqcn, $config);
+        $currentQuery = $request->query->all();
+        $actions = [];
+
+        foreach ($this->getFormatDefinitions($config) as $format => $definition) {
             if (!$config->supportsFormat($format)) {
                 continue;
             }
-            $actions->add(
-                Crud::PAGE_INDEX,
-                Action::new($definition['action'], $definition['label'])
-                    ->linkToUrl(fn () => $this->router->generate(
-                        \sprintf('%s_%s_export_%s', $dashboardRouteName, $crudRouteName, $format),
-                        $currentQuery
-                    ))
-                    ->createAsGlobalAction()
-            );
+
+            $actions[] = Action::new($definition['action'], $definition['label'])
+                ->linkToUrl(fn () => $this->router->generate(
+                    \sprintf('%s_%s_export_%s', $dashboardRouteName, $crudRouteName, $format),
+                    $currentQuery
+                ))
+                ->createAsGlobalAction();
         }
+
+        return $actions;
+    }
+
+    /**
+     * @param list<Action> $exportActions
+     */
+    private function buildExportDropdown(array $exportActions): ActionGroup
+    {
+        $group = ActionGroup::new('jdExportGroup', 'Export', 'fa fa-download')
+            ->createAsGlobalActionGroup()
+            ->asPrimaryActionGroup();
+
+        foreach ($exportActions as $exportAction) {
+            $group->addAction($exportAction);
+        }
+
+        return $group;
     }
 
     /**
