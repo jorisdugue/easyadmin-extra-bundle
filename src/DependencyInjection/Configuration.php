@@ -81,7 +81,7 @@ final class Configuration implements ConfigurationInterface
                 '%kernel.project_dir%/src/Controller',
             ])
             ->validate()
-            ->ifTrue(fn ($paths) => array_filter($paths, fn ($p) => !\is_string($p)) !== [])
+            ->ifTrue(static fn ($paths) => [] !== array_filter($paths, static fn ($p) => !\is_string($p)))
             ->thenInvalid('The "discovery_paths" option must be a list of strings.')
             ->end()
             ->end();

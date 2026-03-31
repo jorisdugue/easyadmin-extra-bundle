@@ -17,6 +17,7 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
+use PHPUnit\Framework\MockObject\Exception;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -210,6 +211,9 @@ final class ExportPayloadFactoryPositionTest extends TestCase
         );
     }
 
+    /**
+     * @throws Exception
+     */
     public function testCreateThrowsWhenCustomMappedRowMissesExpectedKey(): void
     {
         $config = new ExportConfig(
@@ -255,25 +259,19 @@ final class ExportPayloadFactoryPositionTest extends TestCase
 
     /**
      * @param list<object> $entities
+     *
+     * @throws Exception
      */
     private function createQueryBuilderStub(array $entities): QueryBuilder
     {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
 
-        $query = $this->getMockBuilder(Query::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['toIterable'])
-            ->getMock();
-
+        $query = $this->createStub(Query::class);
         $query
             ->method('toIterable')
             ->willReturn($entities);
 
-        $qb = $this->getMockBuilder(QueryBuilder::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['getQuery', 'getEntityManager'])
-            ->getMock();
-
+        $qb = $this->createStub(QueryBuilder::class);
         $qb
             ->method('getQuery')
             ->willReturn($query);

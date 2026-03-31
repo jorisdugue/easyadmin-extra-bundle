@@ -50,6 +50,9 @@ final class AdminExportRouteLoader extends Loader
 
     private bool $isLoaded = false;
 
+    /**
+     * @param list<string> $discoveryPaths
+     */
     public function __construct(
         private readonly array $discoveryPaths,
         private readonly ExportConfigFactory $exportConfigFactory,
