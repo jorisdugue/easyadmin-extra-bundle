@@ -14,6 +14,7 @@ final class ExportFieldDto
     private bool $enabled = true;
     private ?Closure $transformer = null;
     private mixed $default = null;
+    private ?int $position = null;
 
     /**
      * @var array<string, mixed>
@@ -94,6 +95,16 @@ final class ExportFieldDto
     public function setCustomOption(string $name, mixed $value): void
     {
         $this->customOptions[$name] = $value;
+    }
+
+    public function getPosition(): ?int
+    {
+        return $this->position;
+    }
+
+    public function setPosition(?int $position): void
+    {
+        $this->position = $position;
     }
 
     /**

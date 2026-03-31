@@ -153,4 +153,42 @@ trait ExportFieldFormatAssertionsTrait
 
         $field->setLabelForFormat(' ', 'Label');
     }
+
+    public function testPositionStoresValue(): void
+    {
+        $field = $this->createField();
+        $field->position(10);
+
+        self::assertSame(10, $field->getAsDto()->getPosition());
+    }
+
+    public function testPositionCanBeOverridden(): void
+    {
+        $field = $this->createField();
+        $field
+            ->position(10)
+            ->position(20);
+
+        self::assertSame(20, $field->getAsDto()->getPosition());
+    }
+
+    public function testPositionCanBeResetToNull(): void
+    {
+        $field = $this->createField();
+        $field
+            ->position(10)
+            ->position(null);
+
+        self::assertNull($field->getAsDto()->getPosition());
+    }
+
+    public function testPositionThrowsWhenNegative(): void
+    {
+        $field = $this->createField();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Export field position must be greater than or equal to 0.');
+
+        $field->position(-1);
+    }
 }

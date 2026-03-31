@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JorisDugue\EasyAdminExtraBundle\Trait;
 
 use Closure;
+use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportFieldDto;
 
 trait ExportFieldTrait
@@ -84,6 +85,20 @@ trait ExportFieldTrait
     public function setCustomOption(string $name, mixed $value): static
     {
         $this->dto->setCustomOption($name, $value);
+
+        return $this;
+    }
+
+    /**
+     * @return self
+     */
+    public function position(?int $position = null): static
+    {
+        if (null !== $position && $position < 0) {
+            throw new InvalidArgumentException('Export field position must be greater than or equal to 0.');
+        }
+
+        $this->dto->setPosition($position);
 
         return $this;
     }

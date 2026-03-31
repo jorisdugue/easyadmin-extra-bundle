@@ -44,7 +44,7 @@ final readonly class ExportPayloadFactory
             }
 
             if (!\array_key_exists($property, $mappedRow)) {
-                throw new RuntimeException(\sprintf('Custom export row mapper did not return the expected key "%s". Returned keys: %s', $property, implode(', ', array_keys($mappedRow))));
+                throw new RuntimeException(\sprintf('Custom export row mapper is missing key "%s". Expected keys: [%s]. Returned keys: [%s].', $property, implode(', ', array_map(static fn (ExportFieldInterface $f) => (string) $f->getAsDto()->getProperty(), $enabledFields)), implode(', ', array_keys($mappedRow))));
             }
             $normalized[] = $mappedRow[$property];
         }
@@ -104,11 +104,11 @@ final readonly class ExportPayloadFactory
         ExportContext $context,
     ): ExportPayload {
         $format = $this->normalizeFormat($context->format);
-        $enabledFields = array_values(array_filter(
+        $enabledFields = $this->sortFields(array_values(array_filter(
             $config->fields,
             fn (ExportFieldInterface $field): bool => $field->getAsDto()->isEnabled()
                 && $this->exportFieldFormatResolver->isVisible($field->getAsDto(), $format)
-        ));
+        )));
 
         $headers = array_map(
             fn (ExportFieldInterface $field): string => $this->exportFieldFormatResolver->resolveHeader($field->getAsDto(), $format),
@@ -176,5 +176,59 @@ final readonly class ExportPayloadFactory
             ->select(\sprintf('COUNT(%s)', $alias))
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /**
+     * @param list<ExportFieldInterface> $fields
+     *
+     * @return list<ExportFieldInterface>
+     */
+    private function sortFields(array $fields): array
+    {
+        $decorated = [];
+
+        foreach ($fields as $index => $field) {
+            $decorated[] = [
+                'index' => $index,
+                'position' => $field->getAsDto()->getPosition(),
+                'field' => $field,
+            ];
+        }
+
+        usort(
+            $decorated,
+            static function (array $left, array $right): int {
+                $leftPosition = $left['position'];
+                $rightPosition = $right['position'];
+
+                $leftHasPosition = null !== $leftPosition;
+                $rightHasPosition = null !== $rightPosition;
+
+                if ($leftHasPosition && $rightHasPosition) {
+                    $positionComparison = $leftPosition <=> $rightPosition;
+
+                    if (0 !== $positionComparison) {
+                        return $positionComparison;
+                    }
+
+                    return $left['index'] <=> $right['index'];
+                }
+
+                if ($leftHasPosition) {
+                    return -1;
+                }
+
+                if ($rightHasPosition) {
+                    return 1;
+                }
+
+                return $left['index'] <=> $right['index'];
+            }
+        );
+
+        return array_map(
+            static fn (array $item): ExportFieldInterface => $item['field'],
+            $decorated
+        );
     }
 }
