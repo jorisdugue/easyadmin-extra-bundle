@@ -2,6 +2,7 @@
   "name": "jorisdugue/easyadmin-extra-bundle",
   "description": "Advanced data tools for EasyAdmin 5, including exports, security helpers, and future bulk operations.",
   "type": "symfony-bundle",
+  "version": "1.0.0",
   "license": "MIT",
   "authors": [
     {
