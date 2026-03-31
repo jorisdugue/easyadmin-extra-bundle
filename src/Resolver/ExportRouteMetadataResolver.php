@@ -64,10 +64,11 @@ final class ExportRouteMetadataResolver
         if ([] !== $attributes) {
             /** @var AdminRoute $adminRoute */
             $adminRoute = $attributes[0]->newInstance();
-            if (null !== $adminRoute->name) {
-                $routePath = trim($adminRoute->name);
+
+            if (null !== $adminRoute->path) {
+                $routePath = trim($adminRoute->path);
                 if ('' !== $routePath) {
-                    return '/' . ltrim(trim($routePath), '/');
+                    return '/' . ltrim($routePath, '/');
                 }
             }
         }

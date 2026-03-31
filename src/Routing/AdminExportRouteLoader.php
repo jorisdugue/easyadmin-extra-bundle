@@ -44,14 +44,14 @@ use Symfony\Component\Routing\RouteCollection;
  */
 final class AdminExportRouteLoader extends Loader
 {
-    public const ROUTE_LOADER_TYPE = 'jorisdugue_easyadmin_extra.routes';
+    public const string ROUTE_LOADER_TYPE = 'jorisdugue_easyadmin_extra.routes';
 
-    private const ALLOWED_FORMATS = ['csv', 'xlsx', 'json'];
+    private const array ALLOWED_FORMATS = ['csv', 'xlsx', 'json'];
 
     private bool $isLoaded = false;
 
     public function __construct(
-        private readonly string $projectDir,
+        private readonly array $discoveryPaths,
         private readonly ExportConfigFactory $exportConfigFactory,
         private readonly ExportRouteMetadataResolver $exportRouteMetadataResolver,
     ) {
@@ -213,13 +213,17 @@ final class AdminExportRouteLoader extends Loader
      */
     private function discoverPhpClasses(): array
     {
-        $controllerDir = $this->projectDir . '/src/Controller';
-        if (!is_dir($controllerDir)) {
+        $existingDirs = array_values(array_filter(
+            $this->discoveryPaths,
+            static fn (string $dir): bool => is_dir($dir)
+        ));
+
+        if ([] === $existingDirs) {
             return [];
         }
 
         $finder = new Finder();
-        $finder->files()->in($controllerDir)->name('*.php');
+        $finder->files()->in($existingDirs)->name('*.php');
         $classes = [];
 
         foreach ($finder as $file) {
@@ -239,7 +243,7 @@ final class AdminExportRouteLoader extends Loader
             $classes[] = $fqcn;
         }
 
-        return $classes;
+        return array_values(array_unique($classes));
     }
 
     private function extractNamespace(string $contents): ?string

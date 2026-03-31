@@ -53,7 +53,11 @@ return static function (ContainerConfigurator $container): void {
         ->tag('controller.service_arguments');
 
     $services->set(AdminExportRouteLoader::class)
-        ->arg('$projectDir', param('kernel.project_dir'))
+        ->args([
+            param('joris_dugue_easyadmin_extra.discovery_paths'),
+            service(ExportConfigFactory::class),
+            service(ExportRouteMetadataResolver::class),
+        ])
         ->tag('routing.loader');
 
     $services->set(ExportActionExtension::class)

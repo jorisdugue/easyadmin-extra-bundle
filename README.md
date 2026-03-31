@@ -109,6 +109,53 @@ composer require jorisdugue/easyadmin-extra-bundle
 
 Symfony Flex should auto-register the bundle.
 
+### ⚠️ Routes configuration
+
+This bundle uses a custom route loader.
+
+```yaml
+# config/routes/easyadmin_extra.yaml
+easyadmin_extra:
+resource: .
+type: jorisdugue_easyadmin_extra.routes
+```
+
+Without this configuration, export routes will not be generated.
+
+---
+### ⚙️ Configuration (optional)
+
+By default, the bundle scans the following directory to discover dashboards and CRUD controllers:
+
+src/Controller
+
+If your project uses a custom structure (recommended for modular or DDD architectures), you can configure additional discovery paths:
+
+```yaml
+# config/packages/easyadmin_extra.yaml
+joris_dugue_easyadmin_extra:
+discovery_paths:
+- '%kernel.project_dir%/src/Controller'
+- '%kernel.project_dir%/src/Admin'
+- '%kernel.project_dir%/modules'
+```
+
+### 🧠 How discovery works
+
+The bundle will:
+
+- scan all configured directories 
+- detect EasyAdmin dashboards using #[AdminDashboard]
+- detect exportable CRUD controllers using #[AdminExport]
+
+👉 No specific folder structure is required.
+
+👉 This makes the bundle compatible with:
+
+- multi-dashboard applications 
+- modular architectures 
+- monorepos or packages
+
 ---
 
 ## 🚀 Quick Start
