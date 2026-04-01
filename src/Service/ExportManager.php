@@ -98,6 +98,8 @@ final readonly class ExportManager
     }
 
     /**
+     * @param AbstractCrudController<object> $crudController
+     *
      * @throws ReflectionException
      */
     private function createExportContext(
@@ -128,7 +130,7 @@ final readonly class ExportManager
         $this->assertGranted($config);
 
         if (!$config->previewEnabled) {
-            throw new \AccessDeniedException('Export preview is not enabled for this resource.');
+            throw new AccessDeniedException('Export preview is not enabled for this resource.');
         }
 
         if (!$config->supportsFormat($format)) {

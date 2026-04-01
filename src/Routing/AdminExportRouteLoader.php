@@ -70,8 +70,8 @@ final class AdminExportRouteLoader extends Loader
     }
 
     /**
-     * @param array<string, array{dashboard:string,crud:string} $generatedRouteNames
-     * @param array<string, array{dashboard:string,crud:string} $generatedRoutePaths
+     * @param array<string, array{dashboard:string,crud:string}> $generatedRouteNames
+     * @param array<string, array{dashboard:string,crud:string}> $generatedRoutePaths
      */
     private function guardDuplicateRoute(
         array &$generatedRouteNames,
@@ -109,11 +109,11 @@ final class AdminExportRouteLoader extends Loader
         $dashboards = $this->discoverDashboards();
         $crudControllers = $this->discoverExportableCrudControllers();
         /**
-         * @var array<string, array{dashboard:string,crud:string} $generatedRouteNames
+         * @var array<string, array{dashboard:string,crud:string}> $generatedRouteNames
          */
         $generatedRouteNames = [];
         /**
-         * @var array<string, array{dashboard:string,crud:string} $generatedRoutePaths
+         * @var array<string, array{dashboard:string,crud:string}> $generatedRoutePaths
          */
         $generatedRoutePaths = [];
 
