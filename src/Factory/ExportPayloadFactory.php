@@ -97,25 +97,61 @@ final readonly class ExportPayloadFactory
         return $format;
     }
 
-    public function create(
-        object $crudController,
-        QueryBuilder $queryBuilder,
-        ExportConfig $config,
-        ExportContext $context,
-    ): ExportPayload {
+    /**
+     * @return list<list<mixed>>
+     */
+    public function createPreview(object $crudController, QueryBuilder $queryBuilder, ExportConfig $config, ExportContext $context, int $limit): array
+    {
         $format = $this->normalizeFormat($context->format);
-        $enabledFields = $this->sortFields(array_values(array_filter(
+        $enabledFields = $this->resolveEnabledFields($config, $format);
+        $rows = [];
+
+        foreach ($this->generateRows($crudController, $queryBuilder, $enabledFields) as $row) {
+            $rows[] = $row;
+            if (\count($rows) >= $limit) {
+                break;
+            }
+        }
+
+        return [
+            $this->buildHeaders($enabledFields, $format),
+            $rows,
+        ];
+    }
+
+    /**
+     * @return list<ExportFieldInterface>
+     */
+    private function resolveEnabledFields(ExportConfig $config, string $format): array
+    {
+        return $this->sortFields(array_values(array_filter(
             $config->fields,
             fn (ExportFieldInterface $field): bool => $field->getAsDto()->isEnabled()
                 && $this->exportFieldFormatResolver->isVisible($field->getAsDto(), $format)
         )));
+    }
 
-        $headers = array_map(
+    /**
+     * @param list<ExportFieldInterface> $enabledFields
+     *
+     * @return list<string>
+     */
+    private function buildHeaders(array $enabledFields, string $format): array
+    {
+        return array_map(
             fn (ExportFieldInterface $field): string => $this->exportFieldFormatResolver->resolveHeader($field->getAsDto(), $format),
             $enabledFields
         );
+    }
 
-        $properties = array_map(
+    /**
+     * @param list<ExportFieldInterface> $enabledFields
+     *
+     * @return list<string>
+     */
+    private function buildProperties(array $enabledFields): array
+    {
+        return array_map(
             static function (ExportFieldInterface $field): string {
                 $property = $field->getAsDto()->getProperty();
 
@@ -127,6 +163,18 @@ final readonly class ExportPayloadFactory
             },
             $enabledFields
         );
+    }
+
+    public function create(
+        object $crudController,
+        QueryBuilder $queryBuilder,
+        ExportConfig $config,
+        ExportContext $context,
+    ): ExportPayload {
+        $format = $this->normalizeFormat($context->format);
+        $enabledFields = $this->resolveEnabledFields($config, $format);
+        $headers = $this->buildHeaders($enabledFields, $format);
+        $properties = $this->buildProperties($enabledFields);
 
         // Guard: count BEFORE loading any entity into memory.
         if (null !== $config->maxRows) {

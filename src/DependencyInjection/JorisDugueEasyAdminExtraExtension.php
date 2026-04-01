@@ -8,10 +8,24 @@ use Exception;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
+use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 
-final class JorisDugueEasyAdminExtraExtension extends Extension
+final class JorisDugueEasyAdminExtraExtension extends Extension implements PrependExtensionInterface
 {
+    public function prepend(ContainerBuilder $container): void
+    {
+        if (!$container->hasExtension('twig')) {
+            return;
+        }
+
+        $container->prependExtensionConfig('twig', [
+            'paths' => [
+                \dirname(__DIR__, 2) . \DIRECTORY_SEPARATOR . 'templates' => 'JorisDugueEasyAdminExtraBundle',
+            ],
+        ]);
+    }
+
     /**
      * @throws Exception
      */
@@ -22,7 +36,7 @@ final class JorisDugueEasyAdminExtraExtension extends Extension
 
         $container->setParameter('joris_dugue_easyadmin_extra.discovery_paths', $config['discovery_paths']);
         $container->setParameter('joris_dugue_easyadmin_extra.export.action_display', $config['export']['action_display']);
-        $loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../../config'));
+        $loader = new PhpFileLoader($container, new FileLocator(\dirname(__DIR__, 2) . \DIRECTORY_SEPARATOR . 'config'));
         $loader->load('services.php');
     }
 }

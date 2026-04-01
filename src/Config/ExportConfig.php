@@ -29,7 +29,15 @@ final readonly class ExportConfig
         public ?string $routeName = null,
         public ?string $routePath = null,
         public ExportActionDisplay $actionDisplay = ExportActionDisplay::BUTTONS,
+        public bool $previewEnabled = false,
+        public int $previewLimit = 20,
+        public string $previewLabel = 'Preview export',
     ) {}
+
+    public function getDefaultFormat(): string
+    {
+        return $this->formats[0];
+    }
 
     public function useDropdown(): bool
     {
@@ -50,5 +58,15 @@ final readonly class ExportConfig
         }
 
         return $format;
+    }
+
+    public function getLabelForFormat(string $format): string
+    {
+        return match (self::normalizeFormat($format)) {
+            ExportFormat::CSV => $this->csvLabel,
+            ExportFormat::JSON => $this->jsonLabel,
+            ExportFormat::XLSX => $this->xlsxLabel,
+            default => throw new InvalidArgumentException(\sprintf('Unsupported export format "%s".', $format)),
+        };
     }
 }

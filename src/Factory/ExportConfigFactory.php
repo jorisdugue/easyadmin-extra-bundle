@@ -56,6 +56,9 @@ class ExportConfigFactory
             routeName: $attribute->routeName,
             routePath: $attribute->routePath,
             actionDisplay: $attribute->actionDisplay ?? ExportActionDisplay::from($this->defaultActionDisplay),
+            previewEnabled: $attribute->previewEnabled,
+            previewLimit: $attribute->previewLimit,
+            previewLabel: $attribute->previewLabel,
         );
     }
 }

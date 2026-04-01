@@ -1,0 +1,132 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    Export preview
+{% endblock %}
+
+{% block page_actions %}
+    {% if preview.actionDisplay.value == 'buttons' %}
+        {% if preview.showFormatPreviewActions %}
+            {% for availableFormat in available_formats %}
+                <a
+                        class="btn btn-secondary{% if availableFormat == preview.format %} active{% endif %}"
+                        href="{{ preview_urls[availableFormat] }}"
+                >
+                    Preview {{ availableFormat|upper }}
+                </a>
+            {% endfor %}
+        {% endif %}
+
+        {% for availableFormat in available_formats %}
+            <a class="btn btn-primary" href="{{ download_urls[availableFormat] }}">
+                {{ preview.formatLabels[availableFormat] }}
+            </a>
+        {% endfor %}
+    {% else %}
+        {% if preview.showFormatPreviewActions %}
+            <div class="btn-group">
+                <button
+                        class="btn btn-secondary dropdown-toggle"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                >
+                    Preview
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    {% for availableFormat in available_formats %}
+                        <li>
+                            <a
+                                    class="dropdown-item{% if availableFormat == preview.format %} active{% endif %}"
+                                    href="{{ preview_urls[availableFormat] }}"
+                            >
+                                {{ availableFormat|upper }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="btn-group">
+            <button
+                    class="btn btn-primary dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+            >
+                Download
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                {% for availableFormat in available_formats %}
+                    <li>
+                        <a class="dropdown-item" href="{{ download_urls[availableFormat] }}">
+                            {{ preview.formatLabels[availableFormat] }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block main %}
+    <div class="content-panel">
+        <div class="content-panel-body" style="background: transparent">
+            <div class="row">
+                <div class="col-12 col-xl-8">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Entity</dt>
+                        <dd class="col-sm-9">{{ preview.entityName }}</dd>
+
+                        <dt class="col-sm-3">Scope</dt>
+                        <dd class="col-sm-9">{{ preview.scope }}</dd>
+
+                        <dt class="col-sm-3">Format</dt>
+                        <dd class="col-sm-9">{{ preview.format|upper }}</dd>
+
+                        <dt class="col-sm-3">Preview limit</dt>
+                        <dd class="col-sm-9">
+                            {{ preview.limit }} row{% if preview.limit > 1 %}s{% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-panel">
+        <div class="content-panel-body p-0">
+            {% if preview.hasRows %}
+                <div class="table-responsive">
+                    <table class="table datagrid mb-0">
+                        <thead>
+                        <tr>
+                            {% for header in preview.headers %}
+                                <th scope="col">
+                                    <span>{{ header }}</span>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in preview.rows %}
+                            <tr>
+                                {% for value in row %}
+                                    <td data-label="{{ preview.headers[loop.index0] }}">
+                                        {{ value is null ? '' : value }}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty my-4">
+                    <span class="empty-title">No rows available for this preview.</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

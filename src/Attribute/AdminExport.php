@@ -35,5 +35,8 @@ final readonly class AdminExport
         public ?string $routeName = null,
         public ?string $routePath = null,
         public ?ExportActionDisplay $actionDisplay = null,
+        public bool $previewEnabled = false,
+        public int $previewLimit = 20,
+        public string $previewLabel = 'Preview export',
     ) {}
 }

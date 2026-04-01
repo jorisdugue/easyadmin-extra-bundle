@@ -98,19 +98,23 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         }
 
         $exportActions = $this->buildExportActions($request, $context, $crudControllerFqcn, $config);
-
+        $previewAction = $this->buildPreviewAction($request, $context, $crudControllerFqcn, $config);
         if ([] === $exportActions) {
             return;
         }
 
         if (ExportActionDisplay::DROPDOWN === $config->actionDisplay) {
-            $actions->add(Crud::PAGE_INDEX, $this->buildExportDropDown($exportActions));
+            $actions->add(Crud::PAGE_INDEX, $this->buildExportDropDown($exportActions, $previewAction));
 
             return;
         }
 
         foreach ($exportActions as $exportAction) {
             $actions->add(Crud::PAGE_INDEX, $exportAction);
+        }
+
+        if (null !== $previewAction) {
+            $actions->add(Crud::PAGE_INDEX, $previewAction);
         }
     }
 
@@ -146,9 +150,34 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
     }
 
     /**
+     * @param AdminContext<object> $context
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     *
+     * @throws ReflectionException
+     */
+    private function buildPreviewAction(Request $request, AdminContext $context, string $crudControllerFqcn, ExportConfig $config): ?Action
+    {
+        if (!$config->previewEnabled) {
+            return null;
+        }
+
+        $dashboardRouteName = $context->getDashboardRouteName();
+        $crudRouteName = $this->exportRouteMetadataResolver->resolveRouteName($crudControllerFqcn, $config);
+        $currentQuery = $request->query->all();
+        $currentQuery['format'] = $config->getDefaultFormat();
+
+        return Action::new('jdExportPreview', $config->previewLabel)
+            ->linkToUrl(fn (): string => $this->router->generate(
+                \sprintf('%s_%s_export_preview', $dashboardRouteName, $crudRouteName),
+                $currentQuery
+            ))
+            ->createAsGlobalAction();
+    }
+
+    /**
      * @param list<Action> $exportActions
      */
-    private function buildExportDropdown(array $exportActions): ActionGroup
+    private function buildExportDropdown(array $exportActions, ?Action $previewAction): ActionGroup
     {
         $group = ActionGroup::new('jdExportGroup', 'Export', 'fa fa-download')
             ->createAsGlobalActionGroup()
@@ -156,6 +185,10 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
 
         foreach ($exportActions as $exportAction) {
             $group->addAction($exportAction);
+        }
+
+        if (null !== $previewAction) {
+            $group->addAction($previewAction);
         }
 
         return $group;

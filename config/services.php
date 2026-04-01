@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportController;
+use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportPreviewController;
 use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ExportActionExtension;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
@@ -50,6 +51,9 @@ return static function (ContainerConfigurator $container): void {
     $services->set(SpreadsheetCellSanitizerService::class);
     $services->set(ExportRouteMetadataResolver::class);
     $services->set(AdminExportController::class)
+        ->public()
+        ->tag('controller.service_arguments');
+    $services->set(AdminExportPreviewController::class)
         ->public()
         ->tag('controller.service_arguments');
 

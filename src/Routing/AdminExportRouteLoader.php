@@ -69,6 +69,36 @@ final class AdminExportRouteLoader extends Loader
         return self::ROUTE_LOADER_TYPE === $type;
     }
 
+    /**
+     * @param array<string, array{dashboard:string,crud:string} $generatedRouteNames
+     * @param array<string, array{dashboard:string,crud:string} $generatedRoutePaths
+     */
+    private function guardDuplicateRoute(
+        array &$generatedRouteNames,
+        array &$generatedRoutePaths,
+        string $routeName,
+        string $path,
+        string $dashboardFqcn,
+        string $crudFqcn,
+    ): void {
+        if (isset($generatedRouteNames[$routeName])) {
+            throw new LogicException(\sprintf('Duplicate export route name "%s" detected. First generated for dashboard "%s" and CRUD "%s", then again for dashboard "%s" and CRUD "%s".', $routeName, $generatedRouteNames[$routeName]['dashboard'], $generatedRouteNames[$routeName]['crud'], $dashboardFqcn, $crudFqcn));
+        }
+
+        if (isset($generatedRoutePaths[$path])) {
+            throw new LogicException(\sprintf('Duplicate export route path "%s" detected. First generated for dashboard "%s" and CRUD "%s", then again for dashboard "%s" and CRUD "%s".', $path, $generatedRoutePaths[$path]['dashboard'], $generatedRoutePaths[$path]['crud'], $dashboardFqcn, $crudFqcn));
+        }
+
+        $generatedRouteNames[$routeName] = [
+            'dashboard' => $dashboardFqcn,
+            'crud' => $crudFqcn,
+        ];
+        $generatedRoutePaths[$path] = [
+            'dashboard' => $dashboardFqcn,
+            'crud' => $crudFqcn,
+        ];
+    }
+
     public function load(mixed $resource, ?string $type = null): RouteCollection
     {
         if ($this->isLoaded) {
@@ -78,7 +108,13 @@ final class AdminExportRouteLoader extends Loader
         $routes = new RouteCollection();
         $dashboards = $this->discoverDashboards();
         $crudControllers = $this->discoverExportableCrudControllers();
+        /**
+         * @var array<string, array{dashboard:string,crud:string} $generatedRouteNames
+         */
         $generatedRouteNames = [];
+        /**
+         * @var array<string, array{dashboard:string,crud:string} $generatedRoutePaths
+         */
         $generatedRoutePaths = [];
 
         foreach ($dashboards as $dashboard) {
@@ -86,25 +122,8 @@ final class AdminExportRouteLoader extends Loader
                 foreach ($crud['formats'] as $format) {
                     $path = $this->joinPaths($dashboard['path'], $crud['path'], '/export/' . $format);
                     $routeName = \sprintf('%s_%s_export_%s', $dashboard['name'], $crud['name'], $format);
-
-                    if (isset($generatedRouteNames[$routeName])) {
-                        throw new LogicException(\sprintf('Duplicate export route name "%s" detected. First generated for dashboard "%s" and CRUD "%s", then again for dashboard "%s" and CRUD "%s".', $routeName, $generatedRouteNames[$routeName]['dashboard'], $generatedRouteNames[$routeName]['crud'], $dashboard['fqcn'], $crud['fqcn']));
-                    }
-
-                    if (isset($generatedRoutePaths[$path])) {
-                        throw new LogicException(\sprintf('Duplicate export route path "%s" detected. First generated for dashboard "%s" and CRUD "%s", then again for dashboard "%s" and CRUD "%s".', $path, $generatedRoutePaths[$path]['dashboard'], $generatedRoutePaths[$path]['crud'], $dashboard['fqcn'], $crud['fqcn']));
-                    }
-                    $generatedRouteNames[$routeName] = [
-                        'dashboard' => $dashboard['fqcn'],
-                        'crud' => $crud['fqcn'],
-                    ];
-
-                    $generatedRoutePaths[$path] = [
-                        'dashboard' => $dashboard['fqcn'],
-                        'crud' => $crud['fqcn'],
-                    ];
-
-                    $route = new Route(
+                    $this->guardDuplicateRoute($generatedRouteNames, $generatedRoutePaths, $routeName, $path, $dashboard['fqcn'], $crud['fqcn']);
+                    $routes->add($routeName, new Route(
                         $path,
                         [
                             '_controller' => 'JorisDugue\\EasyAdminExtraBundle\\Controller\\AdminExportController',
@@ -120,10 +139,32 @@ final class AdminExportRouteLoader extends Loader
                         '',
                         [],
                         ['GET']
-                    );
-
-                    $routes->add($routeName, $route);
+                    ));
                 }
+
+                if (!$crud['previewEnabled']) {
+                    continue;
+                }
+
+                $previewPath = $this->joinPaths($dashboard['path'], $crud['path'], '/export/preview');
+                $previewRouteName = \sprintf('%s_%s_export_preview', $dashboard['name'], $crud['name']);
+                $this->guardDuplicateRoute($generatedRouteNames, $generatedRoutePaths, $previewRouteName, $previewPath, $dashboard['fqcn'], $crud['fqcn']);
+                $routes->add($previewRouteName, new Route(
+                    $previewPath,
+                    [
+                        '_controller' => 'JorisDugue\\EasyAdminExtraBundle\\Controller\\AdminExportPreviewController',
+                        '_jd_ea_extra_crud' => $crud['fqcn'],
+                        '_jd_ea_extra_dashboard' => $dashboard['fqcn'],
+                        EA::CRUD_CONTROLLER_FQCN => $crud['fqcn'],
+                        EA::DASHBOARD_CONTROLLER_FQCN => $dashboard['fqcn'],
+                        EA::CRUD_ACTION => 'index',
+                    ],
+                    [],
+                    [],
+                    '',
+                    [],
+                    ['GET'],
+                ));
             }
         }
 
@@ -176,7 +217,7 @@ final class AdminExportRouteLoader extends Loader
      * - AdminRoute(name, path)
      * - inferred from the CRUD controller class name
      *
-     * @return list<array{fqcn:string,name:string,path:string,formats:list<string>}>
+     * @return list<array{fqcn:string,name:string,path:string,formats:list<string>,previewEnabled:bool}>
      *
      * @throws InvalidArgumentException when no format is configured or when an unsupported format is found
      * @throws ReflectionException
@@ -203,6 +244,7 @@ final class AdminExportRouteLoader extends Loader
                 'path' => $this->exportRouteMetadataResolver->resolveRoutePath($class, $config),
                 'name' => $this->exportRouteMetadataResolver->resolveRouteName($class, $config),
                 'formats' => $this->normalizeAndValidateFormats($config->formats, $class),
+                'previewEnabled' => $config->previewEnabled,
             ];
         }
 

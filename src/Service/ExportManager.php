@@ -15,12 +15,15 @@ use EasyCorp\Bundle\EasyAdminBundle\Factory\FilterFactory;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
+use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
+use JorisDugue\EasyAdminExtraBundle\Dto\ExportPreview;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\XlsxExporter;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
+use JorisDugue\EasyAdminExtraBundle\Field\ExportFieldOption;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
 use ReflectionClass;
@@ -63,23 +66,13 @@ final readonly class ExportManager
             throw new InvalidArgumentException(\sprintf('Le format "%s" n\'est pas autorisé.', $format));
         }
 
-        $scope = $this->resolveScope($request, $config);
-        $queryBuilder = match ($scope) {
-            'context' => $this->createContextQueryBuilder($crudController, $request),
-            default => $this->createAllQueryBuilder($crudController, $request),
-        };
-
+        $context = $this->createExportContext($crudController, $request, $config, $format);
+        $queryBuilder = $this->createQueryBuilderForScope($crudController, $request, $context->scope);
         $payload = $this->exportPayloadFactory->create(
             $crudController,
             $queryBuilder,
             $config,
-            new ExportContext(
-                format: $format,
-                scope: $scope,
-                generatedAt: new DateTimeImmutable(),
-                user: $this->security->getUser(),
-                entityName: $this->guessEntityName($crudController),
-            )
+            $context
         );
 
         return match ($format) {
@@ -88,6 +81,121 @@ final readonly class ExportManager
             ExportFormat::JSON => $this->jsonExporter->export($payload),
             default => throw new InvalidArgumentException(\sprintf('Le format "%s" n\'est pas supporté.', $format)),
         };
+    }
+
+    /**
+     * @param AbstractCrudController<object> $crudController
+     */
+    private function createQueryBuilderForScope(
+        AbstractCrudController $crudController,
+        Request $request,
+        string $scope,
+    ): QueryBuilder {
+        return match ($scope) {
+            'context' => $this->createContextQueryBuilder($crudController, $request),
+            default => $this->createAllQueryBuilder($crudController, $request),
+        };
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    private function createExportContext(
+        AbstractCrudController $crudController,
+        Request $request,
+        ExportConfig $config,
+        string $format,
+    ): ExportContext {
+        return new ExportContext(
+            format: $format,
+            scope: $this->resolveScope($request, $config),
+            generatedAt: new DateTimeImmutable(),
+            user: $this->security->getUser(),
+            entityName: $this->guessEntityName($crudController),
+        );
+    }
+
+    /**
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     *
+     * @throws ReflectionException
+     */
+    public function preview(string $crudControllerFqcn, string $format, Request $request): ExportPreview
+    {
+        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
+        $config = $this->exportConfigFactory->create($crudControllerFqcn);
+
+        $this->assertGranted($config);
+
+        if (!$config->previewEnabled) {
+            throw new \AccessDeniedException('Export preview is not enabled for this resource.');
+        }
+
+        if (!$config->supportsFormat($format)) {
+            throw new InvalidArgumentException(\sprintf('Le format "%s" n\'est pas autorisé pour la prévisualisation.', $format));
+        }
+
+        $context = $this->createExportcontext($crudController, $request, $config, $format);
+        $queryBuilder = $this->createQueryBuilderForScope($crudController, $request, $context->scope);
+        $queryBuilder->setFirstResult(0)
+            ->setMaxResults($config->previewLimit);
+        [$headers, $rows] = $this->exportPayloadFactory->createPreview(
+            $crudController,
+            $queryBuilder,
+            $config,
+            $context,
+            $config->previewLimit
+        );
+
+        $formatLabels = [];
+
+        foreach ($config->formats as $availableFormat) {
+            $formatLabels[$availableFormat] = $config->getLabelForFormat($availableFormat);
+        }
+
+        return new ExportPreview(
+            format: $format,
+            scope: $context->scope,
+            entityName: $context->entityName,
+            limit: $config->previewLimit,
+            headers: $headers,
+            rows: $rows,
+            showFormatPreviewActions: $this->hasFormatSpecificPreviewVariants($config),
+            actionDisplay: $config->actionDisplay,
+            formatLabels: $formatLabels
+        );
+    }
+
+    private function hasFormatSpecificPreviewVariants(ExportConfig $config): bool
+    {
+        if (\count($config->formats) < 2) {
+            return false;
+        }
+
+        foreach ($config->fields as $field) {
+            if ($this->fieldHasFormatSpecificPreviewVariant($field)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function fieldHasFormatSpecificPreviewVariant(ExportFieldInterface $field): bool
+    {
+        $dto = $field->getAsDto();
+        $visibleFormats = $dto->getCustomOption(ExportFieldOption::VISIBLE_FORMATS);
+        if (\is_array($visibleFormats) && [] !== $visibleFormats) {
+            return true;
+        }
+        $hiddenFormats = $dto->getCustomOption(ExportFieldOption::HIDDEN_FORMATS);
+        if (\is_array($hiddenFormats) && [] !== $hiddenFormats) {
+            return true;
+        }
+
+        $formatLabels = $dto->getCustomOption(ExportFieldOption::FORMAT_LABELS);
+
+        return \is_array($formatLabels) && [] !== $formatLabels;
     }
 
     private function resolveScope(Request $request, ExportConfig $config): string
