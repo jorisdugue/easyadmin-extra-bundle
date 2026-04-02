@@ -14,8 +14,8 @@ final class IntegerExportField implements ExportFieldInterface
 {
     use ExportFieldFormatTrait;
     use ExportFieldMaskTrait;
-    use ExportFieldTrait;
     use ExportFieldRoleTrait;
+    use ExportFieldTrait;
 
     public const string OPTION_THOUSANDS_SEPARATOR = 'thousands_separator';
 

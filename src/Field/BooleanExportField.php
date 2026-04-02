@@ -24,8 +24,8 @@ final class BooleanExportField implements ExportFieldInterface
 {
     use ExportFieldFormatTrait;
     use ExportFieldMaskTrait;
-    use ExportFieldTrait;
     use ExportFieldRoleTrait;
+    use ExportFieldTrait;
 
     public const string OPTION_TRUE_LABEL = 'true_label';
     public const string OPTION_FALSE_LABEL = 'false_label';

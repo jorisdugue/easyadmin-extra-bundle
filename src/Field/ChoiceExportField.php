@@ -27,8 +27,8 @@ final class ChoiceExportField implements ExportFieldInterface
 {
     use ExportFieldFormatTrait;
     use ExportFieldMaskTrait;
-    use ExportFieldTrait;
     use ExportFieldRoleTrait;
+    use ExportFieldTrait;
 
     public const string OPTION_CHOICES = 'choices';
 

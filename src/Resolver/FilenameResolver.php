@@ -7,7 +7,6 @@ namespace JorisDugue\EasyAdminExtraBundle\Resolver;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
 use RuntimeException;
-use Symfony\Component\Security\Core\User\UserInterface;
 
 final class FilenameResolver
 {

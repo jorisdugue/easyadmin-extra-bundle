@@ -9,6 +9,9 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 final readonly class ExportContext
 {
+    /**
+     * @param list<string> $roles
+     */
     public function __construct(
         public string $format,
         public string $scope,

@@ -14,8 +14,8 @@ final class DateTimeExportField implements ExportFieldInterface
 {
     use ExportFieldFormatTrait;
     use ExportFieldMaskTrait;
-    use ExportFieldTrait;
     use ExportFieldRoleTrait;
+    use ExportFieldTrait;
 
     public const string OPTION_FORMAT = 'format';
     private const string DEFAULT_FORMAT = 'Y-m-d H:i:s';

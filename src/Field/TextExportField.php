@@ -14,8 +14,8 @@ final class TextExportField implements ExportFieldInterface
 {
     use ExportFieldFormatTrait;
     use ExportFieldMaskTrait;
-    use ExportFieldTrait;
     use ExportFieldRoleTrait;
+    use ExportFieldTrait;
 
     public static function new(string $propertyName, ?string $label = null): static
     {

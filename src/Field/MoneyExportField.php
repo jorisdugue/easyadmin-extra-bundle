@@ -15,8 +15,8 @@ final class MoneyExportField implements ExportFieldInterface
 {
     use ExportFieldFormatTrait;
     use ExportFieldMaskTrait;
-    use ExportFieldTrait;
     use ExportFieldRoleTrait;
+    use ExportFieldTrait;
 
     public const string OPTION_SYMBOL = 'symbol';
     public const string OPTION_SYMBOL_POSITION = 'symbol_position';

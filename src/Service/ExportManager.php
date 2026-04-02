@@ -110,6 +110,7 @@ final readonly class ExportManager
         string $format,
     ): ExportContext {
         $user = $this->security->getUser();
+
         return new ExportContext(
             format: $format,
             scope: $this->resolveScope($request, $config),
@@ -387,6 +388,9 @@ final readonly class ExportManager
         return strtolower($short);
     }
 
+    /**
+     * @return list<string>
+     */
     private function resolveUserRoles(?UserInterface $user): array
     {
         if (null === $user) {
@@ -396,10 +400,6 @@ final readonly class ExportManager
         $roles = [];
 
         foreach ($user->getRoles() as $role) {
-            if (!\is_string($role)) {
-                continue;
-            }
-
             $normalizedRole = strtoupper(trim($role));
 
             if ('' === $normalizedRole) {

@@ -15,8 +15,8 @@ final class NumberExportField implements ExportFieldInterface
 {
     use ExportFieldFormatTrait;
     use ExportFieldMaskTrait;
-    use ExportFieldTrait;
     use ExportFieldRoleTrait;
+    use ExportFieldTrait;
 
     public const string OPTION_DECIMALS = 'decimals';
     public const string OPTION_DECIMAL_SEPARATOR = 'decimal_separator';
