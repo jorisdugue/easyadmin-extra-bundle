@@ -65,7 +65,7 @@
     "test": "vendor/bin/phpunit",
     "cs:check": "vendor/bin/php-cs-fixer fix --dry-run --diff --verbose",
     "cs:fix": "vendor/bin/php-cs-fixer fix --verbose",
-    "phpstan": "phpstan analyse"
+    "phpstan": "phpstan analyse --memory-limit 1024M"
   },
   "config": {
     "sort-packages": true,

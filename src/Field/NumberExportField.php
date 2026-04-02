@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
 use JorisDugue\EasyAdminExtraBundle\Trait\ExportFieldFormatTrait;
 use JorisDugue\EasyAdminExtraBundle\Trait\ExportFieldMaskTrait;
+use JorisDugue\EasyAdminExtraBundle\Trait\ExportFieldRoleTrait;
 use JorisDugue\EasyAdminExtraBundle\Trait\ExportFieldTrait;
 
 final class NumberExportField implements ExportFieldInterface
@@ -15,6 +16,7 @@ final class NumberExportField implements ExportFieldInterface
     use ExportFieldFormatTrait;
     use ExportFieldMaskTrait;
     use ExportFieldTrait;
+    use ExportFieldRoleTrait;
 
     public const string OPTION_DECIMALS = 'decimals';
     public const string OPTION_DECIMAL_SEPARATOR = 'decimal_separator';

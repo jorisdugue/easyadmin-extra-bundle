@@ -10,27 +10,70 @@ use JorisDugue\EasyAdminExtraBundle\Field\ExportFieldOption;
 
 final class ExportFieldFormatResolver
 {
-    public function isVisible(ExportFieldDto $dto, string $format): bool
+    /**
+     * @param list<string> $roles
+     */
+    public function isVisible(ExportFieldDto $dto, string $format, array $roles = []): bool
     {
         $format = $this->normalizeFormat($format);
+        $roles = $this->normalizeRoles($roles);
 
         $visibleFormats = $dto->getCustomOption(ExportFieldOption::VISIBLE_FORMATS);
         $hiddenFormats = $dto->getCustomOption(ExportFieldOption::HIDDEN_FORMATS);
 
-        if (\is_array($visibleFormats) && [] !== $visibleFormats) {
-            return \in_array($format, $visibleFormats, true);
+        // FORMAT - hidden
+        if (\is_array($hiddenFormats) && [] !== $hiddenFormats && \in_array($format, $hiddenFormats, true)) {
+            return false;
         }
 
-        if (\is_array($hiddenFormats) && [] !== $hiddenFormats) {
-            return !\in_array($format, $hiddenFormats, true);
+        // Format Whitelist
+        if (\is_array($visibleFormats) && [] !== $visibleFormats && !\in_array($format, $visibleFormats, true)) {
+            return false;
+        }
+
+        $hiddenRoles = $dto->getCustomOption(ExportFieldOption::HIDDEN_ROLES);
+        $visibleRoles = $dto->getCustomOption(ExportFieldOption::VISIBLE_ROLES);
+
+        // ROLE - HIDDEN
+        if (\is_array($hiddenRoles) && [] !== $hiddenRoles) {
+            foreach ($roles as $role) {
+                if (\in_array($role, $hiddenRoles, true)) {
+                    return false;
+                }
+            }
+        }
+
+        // ROLE - VISIBLE
+        if (\is_array($visibleRoles) && [] !== $visibleRoles) {
+            foreach ($roles as $role) {
+                if (\in_array($role, $visibleRoles, true)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         return true;
     }
 
-    public function resolveHeader(ExportFieldDto $dto, string $format): string
+    public function resolveHeader(ExportFieldDto $dto, string $format, array $roles = []): string
     {
         $format = $this->normalizeFormat($format);
+        $roles = $this->normalizeRoles($roles);
+        $roleLabels = $dto->getCustomOption(ExportFieldOption::ROLE_LABELS);
+
+        if (\is_array($roleLabels) && [] !== $roleLabels) {
+            foreach ($roles as $role) {
+                if (\array_key_exists($role, $roleLabels)) {
+                    $label = $roleLabels[$role];
+
+                    if (null !== $label && '' !== trim((string) $label)) {
+                        return (string) $label;
+                    }
+                }
+            }
+        }
 
         $formatLabels = $dto->getCustomOption(ExportFieldOption::FORMAT_LABELS);
 
@@ -61,5 +104,27 @@ final class ExportFieldFormatResolver
         }
 
         return $format;
+    }
+
+    /**
+     * @param list<string> $roles
+     * @return list<string>
+     */
+    private function normalizeRoles(array $roles): array {
+        $normalizedRoles = [];
+
+        foreach ($roles as $role) {
+            $normalizedRole = strtoupper(trim($role));
+
+            if ('' === $normalizedRole) {
+                continue;
+            }
+
+            if (!\in_array($normalizedRole, $normalizedRoles, true)) {
+                $normalizedRoles[] = $normalizedRole;
+            }
+        }
+
+        return $normalizedRoles;
     }
 }

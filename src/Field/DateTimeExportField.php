@@ -7,6 +7,7 @@ namespace JorisDugue\EasyAdminExtraBundle\Field;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
 use JorisDugue\EasyAdminExtraBundle\Trait\ExportFieldFormatTrait;
 use JorisDugue\EasyAdminExtraBundle\Trait\ExportFieldMaskTrait;
+use JorisDugue\EasyAdminExtraBundle\Trait\ExportFieldRoleTrait;
 use JorisDugue\EasyAdminExtraBundle\Trait\ExportFieldTrait;
 
 final class DateTimeExportField implements ExportFieldInterface
@@ -14,6 +15,7 @@ final class DateTimeExportField implements ExportFieldInterface
     use ExportFieldFormatTrait;
     use ExportFieldMaskTrait;
     use ExportFieldTrait;
+    use ExportFieldRoleTrait;
 
     public const string OPTION_FORMAT = 'format';
     private const string DEFAULT_FORMAT = 'Y-m-d H:i:s';

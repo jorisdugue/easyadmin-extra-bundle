@@ -22,8 +22,7 @@ final class FilenameResolver
             return $this->sanitize($value);
         }
 
-        $user = $context->user;
-        $username = $user instanceof UserInterface ? $user->getUserIdentifier() : 'anon';
+        $username = $context->user?->getUserIdentifier() ?? 'anon';
 
         $resolved = strtr($config->filename, [
             '{date}' => $context->generatedAt->format('Y-m-d'),

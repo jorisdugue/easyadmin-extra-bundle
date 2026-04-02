@@ -34,6 +34,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 final readonly class ExportManager
 {
@@ -108,12 +109,14 @@ final readonly class ExportManager
         ExportConfig $config,
         string $format,
     ): ExportContext {
+        $user = $this->security->getUser();
         return new ExportContext(
             format: $format,
             scope: $this->resolveScope($request, $config),
             generatedAt: new DateTimeImmutable(),
-            user: $this->security->getUser(),
+            user: $user,
             entityName: $this->guessEntityName($crudController),
+            roles: $this->resolveUserRoles($user)
         );
     }
 
@@ -382,5 +385,32 @@ final readonly class ExportManager
         $short = preg_replace('/(?<!^)[A-Z]/', '_$0', $short) ?? $short;
 
         return strtolower($short);
+    }
+
+    private function resolveUserRoles(?UserInterface $user): array
+    {
+        if (null === $user) {
+            return [];
+        }
+
+        $roles = [];
+
+        foreach ($user->getRoles() as $role) {
+            if (!\is_string($role)) {
+                continue;
+            }
+
+            $normalizedRole = strtoupper(trim($role));
+
+            if ('' === $normalizedRole) {
+                continue;
+            }
+
+            if (!\in_array($normalizedRole, $roles, true)) {
+                $roles[] = $normalizedRole;
+            }
+        }
+
+        return $roles;
     }
 }

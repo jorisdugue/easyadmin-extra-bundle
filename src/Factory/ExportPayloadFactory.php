@@ -102,8 +102,9 @@ final readonly class ExportPayloadFactory
      */
     public function createPreview(object $crudController, QueryBuilder $queryBuilder, ExportConfig $config, ExportContext $context, int $limit): array
     {
+        $roles = $context->roles;
         $format = $this->normalizeFormat($context->format);
-        $enabledFields = $this->resolveEnabledFields($config, $format);
+        $enabledFields = $this->resolveEnabledFields($config, $format, $roles);
         $rows = [];
 
         foreach ($this->generateRows($crudController, $queryBuilder, $enabledFields) as $row) {
@@ -114,32 +115,47 @@ final readonly class ExportPayloadFactory
         }
 
         return [
-            $this->buildHeaders($enabledFields, $format),
+            $this->buildHeaders($enabledFields, $format, $roles),
             $rows,
         ];
     }
 
     /**
+     * @param list<string> $roles
+     *
      * @return list<ExportFieldInterface>
      */
-    private function resolveEnabledFields(ExportConfig $config, string $format): array
+    private function resolveEnabledFields(ExportConfig $config, string $format, array $roles = []): array
     {
-        return $this->sortFields(array_values(array_filter(
-            $config->fields,
-            fn (ExportFieldInterface $field): bool => $field->getAsDto()->isEnabled()
-                && $this->exportFieldFormatResolver->isVisible($field->getAsDto(), $format)
-        )));
+        $enabledFields = [];
+
+        foreach ($config->fields as $field) {
+            $dto = $field->getAsDto();
+
+            if (!$dto->isEnabled()) {
+                continue;
+            }
+
+            if (!$this->exportFieldFormatResolver->isVisible($dto, $format, $roles)) {
+                continue;
+            }
+
+            $enabledFields[] = $field;
+        }
+
+        return $this->sortFields($enabledFields);
     }
 
     /**
      * @param list<ExportFieldInterface> $enabledFields
+     * @param list<string> $roles
      *
      * @return list<string>
      */
-    private function buildHeaders(array $enabledFields, string $format): array
+    private function buildHeaders(array $enabledFields, string $format, array $roles = []): array
     {
         return array_map(
-            fn (ExportFieldInterface $field): string => $this->exportFieldFormatResolver->resolveHeader($field->getAsDto(), $format),
+            fn (ExportFieldInterface $field): string => $this->exportFieldFormatResolver->resolveHeader($field->getAsDto(), $format, $roles),
             $enabledFields
         );
     }
@@ -171,9 +187,10 @@ final readonly class ExportPayloadFactory
         ExportConfig $config,
         ExportContext $context,
     ): ExportPayload {
+        $roles = $context->roles;
         $format = $this->normalizeFormat($context->format);
-        $enabledFields = $this->resolveEnabledFields($config, $format);
-        $headers = $this->buildHeaders($enabledFields, $format);
+        $enabledFields = $this->resolveEnabledFields($config, $format, $roles);
+        $headers = $this->buildHeaders($enabledFields, $format, $roles);
         $properties = $this->buildProperties($enabledFields);
 
         // Guard: count BEFORE loading any entity into memory.
