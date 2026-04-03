@@ -13,6 +13,7 @@ use JorisDugue\EasyAdminExtraBundle\Contract\CustomExportRowMapperInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
 use JorisDugue\EasyAdminExtraBundle\Field\TextExportField;
+use JorisDugue\EasyAdminExtraBundle\Resolver\ExportCountResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
@@ -32,7 +33,8 @@ final class ExportPayloadFactoryPositionTest extends TestCase
         $this->factory = new ExportPayloadFactory(
             new ExportFieldValueResolver(new PropertyValueReader()),
             new FilenameResolver(),
-            new ExportFieldFormatResolver()
+            new ExportFieldFormatResolver(),
+            new ExportCountResolver()
         );
     }
 

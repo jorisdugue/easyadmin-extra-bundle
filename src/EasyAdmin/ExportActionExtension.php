@@ -104,7 +104,7 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         }
 
         if (ExportActionDisplay::DROPDOWN === $config->actionDisplay) {
-            $actions->add(Crud::PAGE_INDEX, $this->buildExportDropDown($exportActions, $previewAction));
+            $actions->add(Crud::PAGE_INDEX, $this->buildExportDropdown($exportActions, $previewAction));
 
             return;
         }

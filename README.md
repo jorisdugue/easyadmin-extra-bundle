@@ -75,6 +75,7 @@ EasyAdmin is great for CRUD operations, but real-world backoffices often need mo
 * Role-based access control (`requiredRole`)
 * Opt-in export via attribute
 * Full sanitization of exported values
+* Strict row count validation to enforce export limits safely
 * Built-in masking:
 
   * `mask()`
@@ -88,6 +89,7 @@ EasyAdmin is great for CRUD operations, but real-world backoffices often need mo
 * CSV exports are streamed (`php://output`)
 * Uses Doctrine `toIterable()` (no full dataset in memory)
 * Optional EntityManager clearing
+* Strict row count validation before export
 * Designed for large datasets
 
 ---
@@ -123,6 +125,7 @@ type: jorisdugue_easyadmin_extra.routes
 Without this configuration, export routes will not be generated.
 
 ---
+
 ### ⚙️ Configuration (optional)
 
 By default, the bundle scans the following directory to discover dashboards and CRUD controllers:
@@ -144,17 +147,17 @@ discovery_paths:
 
 The bundle will:
 
-- scan all configured directories 
-- detect EasyAdmin dashboards using #[AdminDashboard]
-- detect exportable CRUD controllers using #[AdminExport]
+* scan all configured directories
+* detect EasyAdmin dashboards using #[AdminDashboard]
+* detect exportable CRUD controllers using #[AdminExport]
 
 👉 No specific folder structure is required.
 
 👉 This makes the bundle compatible with:
 
-- multi-dashboard applications 
-- modular architectures 
-- monorepos or packages
+* multi-dashboard applications
+* modular architectures
+* monorepos or packages
 
 ---
 
@@ -246,6 +249,32 @@ Fields with a defined position are sorted first, then remaining fields keep thei
 
 ---
 
+### Custom export count
+
+In some cases, the default export count strategy cannot reliably determine
+how many rows will be exported (e.g. grouped queries or complex joins).
+
+To handle these situations, you can provide your own count query:
+
+```php
+use JorisDugue\EasyAdminExtraBundle\Contract\CustomExportCountQueryBuilderInterface;
+
+class OrderCrudController extends AbstractCrudController implements CustomExportCountQueryBuilderInterface
+{
+    public function createExportCountQueryBuilder(): QueryBuilder
+    {
+        return $this->getEntityManager()
+            ->createQueryBuilder()
+            ->select('COUNT(o.id)')
+            ->from(Order::class, 'o');
+    }
+}
+```
+
+👉 This custom query always takes precedence over the default strategy.
+
+---
+
 ## 🔗 EasyAdmin Integration
 
 This bundle integrates directly with EasyAdmin:
@@ -279,7 +308,7 @@ Output (CSV / XLSX / JSON)
 ## 📄 Supported Formats
 
 | Format | Notes                             |
-|--------|-----------------------------------|
+| ------ | --------------------------------- |
 | CSV    | Streamed, best for large datasets |
 | XLSX   | Spreadsheet export                |
 | JSON   | Structured data                   |
@@ -306,19 +335,52 @@ allowSpreadsheetFormulas: true
 
 * CSV is recommended for large datasets
 * XLSX uses more memory
-* Automatic `COUNT(*)` may fail with:
 
-  * `GROUP BY`
-  * `HAVING`
-  * `DISTINCT`
-* Complex queries may require custom handling
+### Export row count
+
+The bundle uses a strict and safe row counting strategy before exporting data.
+
+The default strategy supports:
+
+* a single root entity
+* a single scalar identifier
+
+The following cases are **not supported by the default count strategy**:
+
+* `GROUP BY`
+* `HAVING`
+* composite identifiers
+* complex queries altering the root entity cardinality
+
+In these situations, the export will fail with an explicit exception.
+
+👉 To handle these cases, implement a custom count query (see above).
+
+---
+
+## 🧠 Design choices
+
+### Strict counting strategy
+
+The bundle intentionally uses a strict counting strategy.
+
+Instead of returning potentially incorrect counts, it will:
+
+* fail explicitly on ambiguous queries
+* require a custom count implementation when needed
+
+This ensures:
+
+* accurate export limits (`maxRows`)
+* predictable behavior
+* safer data handling
 
 ---
 
 ## 🔍 Comparison
 
 | Feature              | Native EasyAdmin | This Bundle |
-|----------------------|------------------|-------------|
+| -------------------- | ---------------- | ----------- |
 | Export               | ❌                | ✅           |
 | CSV streaming        | ❌                | ✅           |
 | XLSX export          | ❌                | ✅           |

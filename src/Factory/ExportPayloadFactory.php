@@ -8,8 +8,8 @@ use Doctrine\ORM\QueryBuilder;
 use Generator;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
-use JorisDugue\EasyAdminExtraBundle\Contract\CustomExportCountQueryBuilderInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\CustomExportRowMapperInterface;
+use JorisDugue\EasyAdminExtraBundle\Contract\ExportCountResolverInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
@@ -24,9 +24,16 @@ final readonly class ExportPayloadFactory
         private ExportFieldValueResolver $fieldValueResolver,
         private FilenameResolver $filenameResolver,
         private ExportFieldFormatResolver $exportFieldFormatResolver,
+        private ExportCountResolverInterface $exportCountResolver,
     ) {}
 
     /**
+     * Normalizes a custom mapped row returned by a CRUD controller into the
+     * exact column order expected by the export payload.
+     *
+     * Every enabled field must expose a non-empty property name, and the mapped
+     * row must contain a matching key for each enabled field.
+     *
      * @param array<string, mixed> $mappedRow
      * @param list<ExportFieldInterface> $enabledFields
      *
@@ -53,9 +60,17 @@ final readonly class ExportPayloadFactory
     }
 
     /**
+     * Generates export rows lazily from the export query.
+     *
+     * If the CRUD controller provides a custom row mapper, that mapper is used.
+     * Otherwise, each enabled export field is resolved one by one.
+     *
+     * The EntityManager is cleared periodically to keep memory usage stable on
+     * large exports.
+     *
      * @param list<ExportFieldInterface> $enabledFields
      *
-     * @return Generator<int, list<string>>
+     * @return Generator<int, list<mixed>>
      */
     private function generateRows(
         object $crudController,
@@ -86,6 +101,9 @@ final readonly class ExportPayloadFactory
         }
     }
 
+    /**
+     * @throws InvalidArgumentException when the format is empty after normalization
+     */
     private function normalizeFormat(string $format): string
     {
         $format = strtolower(trim($format));
@@ -98,7 +116,9 @@ final readonly class ExportPayloadFactory
     }
 
     /**
-     * @return list<list<mixed>>
+     * Creates a preview payload made of headers and a limited subset of rows.
+     *
+     * @return array{0: list<string>, 1: list<list<mixed>>}
      */
     public function createPreview(object $crudController, QueryBuilder $queryBuilder, ExportConfig $config, ExportContext $context, int $limit): array
     {
@@ -121,6 +141,9 @@ final readonly class ExportPayloadFactory
     }
 
     /**
+     * Resolves the enabled export fields for the given format and role set, then
+     * returns them sorted by configured position.
+     *
      * @param list<string> $roles
      *
      * @return list<ExportFieldInterface>
@@ -147,6 +170,8 @@ final readonly class ExportPayloadFactory
     }
 
     /**
+     * Builds the header row for the given enabled fields.
+     *
      * @param list<ExportFieldInterface> $enabledFields
      * @param list<string> $roles
      *
@@ -161,6 +186,8 @@ final readonly class ExportPayloadFactory
     }
 
     /**
+     * Builds the ordered property list matching the enabled field order.
+     *
      * @param list<ExportFieldInterface> $enabledFields
      *
      * @return list<string>
@@ -181,6 +208,12 @@ final readonly class ExportPayloadFactory
         );
     }
 
+    /**
+     * Creates the final export payload for a given CRUD controller and query.
+     *
+     * If a maxRows limit is configured, the row count is resolved before any
+     * entity is streamed in memory.
+     */
     public function create(
         object $crudController,
         QueryBuilder $queryBuilder,
@@ -195,7 +228,7 @@ final readonly class ExportPayloadFactory
 
         // Guard: count BEFORE loading any entity into memory.
         if (null !== $config->maxRows) {
-            $count = $this->countRows($crudController, $queryBuilder);
+            $count = $this->exportCountResolver->count($queryBuilder, $crudController);
 
             if ($count > $config->maxRows) {
                 throw new RuntimeException(\sprintf('Export limited to %d rows, but %d rows were found. Use filters to reduce the selection.', $config->maxRows, $count));
@@ -208,48 +241,23 @@ final readonly class ExportPayloadFactory
             headers: $headers,
             properties: $properties,
             rows: $this->generateRows($crudController, $queryBuilder, $enabledFields),
-            allowSpreadsheetFormulas: $config->allowSpreadsheetFormulas
+            allowSpreadsheetFormulas: $config->allowSpreadsheetFormulas,
         );
     }
 
     /**
-     * Counts the number of rows that would be exported.
+     * Sorts export fields using the following rules:
+     * - fields with an explicit position come first, sorted ascending;
+     * - ties on position are resolved using the original declaration order;
+     * - fields without position come last, preserving declaration order.
      *
-     * If the CRUD controller implements CustomExportCountQueryBuilderInterface,
-     * its custom count QueryBuilder is used. Otherwise, the count is derived
-     * from the main export QueryBuilder.
-     */
-    private function countRows(object $crudController, QueryBuilder $qb): int
-    {
-        if ($crudController instanceof CustomExportCountQueryBuilderInterface) {
-            $countQb = $crudController->createExportCountQueryBuilder();
-
-            return (int) $countQb->getQuery()->getSingleScalarResult();
-        }
-
-        $countQb = clone $qb;
-        $aliases = $countQb->getRootAliases();
-
-        if ([] === $aliases) {
-            throw new RuntimeException('Unable to determine the root alias for export row counting.');
-        }
-
-        $alias = $aliases[0];
-
-        return (int) $countQb
-            ->resetDQLPart('orderBy')
-            ->select(\sprintf('COUNT(%s)', $alias))
-            ->getQuery()
-            ->getSingleScalarResult();
-    }
-
-    /**
      * @param list<ExportFieldInterface> $fields
      *
      * @return list<ExportFieldInterface>
      */
     private function sortFields(array $fields): array
     {
+        /** @var list<array{index: int, position: int|null, field: ExportFieldInterface}> $decorated */
         $decorated = [];
 
         foreach ($fields as $index => $field) {
@@ -262,6 +270,10 @@ final readonly class ExportPayloadFactory
 
         usort(
             $decorated,
+            /**
+             * @param array{index: int, position: int|null, field: ExportFieldInterface} $left
+             * @param array{index: int, position: int|null, field: ExportFieldInterface} $right
+             */
             static function (array $left, array $right): int {
                 $leftPosition = $left['position'];
                 $rightPosition = $right['position'];

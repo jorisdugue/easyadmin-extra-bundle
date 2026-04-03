@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use JorisDugue\EasyAdminExtraBundle\Contract\ExportCountResolverInterface;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportPreviewController;
 use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ExportActionExtension;
@@ -14,6 +15,7 @@ use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\ExportCountResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
@@ -64,7 +66,8 @@ return static function (ContainerConfigurator $container): void {
             service(ExportRouteMetadataResolver::class),
         ])
         ->tag('routing.loader');
-
+    $services->set(ExportCountResolver::class);
+    $services->alias(ExportCountResolverInterface::class, ExportCountResolver::class);
     $services->set(ExportActionExtension::class)
         ->tag('ea.action_extension');
 };

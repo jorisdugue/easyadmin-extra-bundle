@@ -141,7 +141,7 @@ final readonly class ExportManager
             throw new InvalidArgumentException(\sprintf('Le format "%s" n\'est pas autorisé pour la prévisualisation.', $format));
         }
 
-        $context = $this->createExportcontext($crudController, $request, $config, $format);
+        $context = $this->createExportContext($crudController, $request, $config, $format);
         $queryBuilder = $this->createQueryBuilderForScope($crudController, $request, $context->scope);
         $queryBuilder->setFirstResult(0)
             ->setMaxResults($config->previewLimit);
