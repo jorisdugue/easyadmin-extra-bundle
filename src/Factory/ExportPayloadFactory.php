@@ -13,10 +13,12 @@ use JorisDugue\EasyAdminExtraBundle\Contract\ExportCountResolverInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
+use JorisDugue\EasyAdminExtraBundle\Exception\ExportLimitExceededException;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidMappedExportRowException;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
-use RuntimeException;
 
 final readonly class ExportPayloadFactory
 {
@@ -47,11 +49,20 @@ final readonly class ExportPayloadFactory
             $property = $field->getAsDto()->getProperty();
 
             if (null === $property || '' === trim($property)) {
-                throw new RuntimeException('An enabled export field is missing its property configuration.');
+                throw InvalidExportConfigurationException::missingFieldProperty(
+                    $field->getAsDto()->getLabel() ?? '[unnamed]'
+                );
             }
 
             if (!\array_key_exists($property, $mappedRow)) {
-                throw new RuntimeException(\sprintf('Custom export row mapper is missing key "%s". Expected keys: [%s]. Returned keys: [%s].', $property, implode(', ', array_map(static fn (ExportFieldInterface $f) => (string) $f->getAsDto()->getProperty(), $enabledFields)), implode(', ', array_keys($mappedRow))));
+                throw InvalidMappedExportRowException::missingProperty(
+                    $property,
+                    array_values(array_map(
+                        static fn (ExportFieldInterface $f): string => (string) $f->getAsDto()->getProperty(),
+                        $enabledFields
+                    )),
+                    array_values(array_map('strval', array_keys($mappedRow))),
+                );
             }
             $normalized[] = $mappedRow[$property];
         }
@@ -199,7 +210,9 @@ final readonly class ExportPayloadFactory
                 $property = $field->getAsDto()->getProperty();
 
                 if (null === $property || '' === trim($property)) {
-                    throw new RuntimeException('An enabled export field is missing its property configuration.');
+                    throw InvalidExportConfigurationException::missingFieldProperty(
+                        $field->getAsDto()->getLabel() ?? '[unnamed]'
+                    );
                 }
 
                 return $property;
@@ -231,7 +244,7 @@ final readonly class ExportPayloadFactory
             $count = $this->exportCountResolver->count($queryBuilder, $crudController);
 
             if ($count > $config->maxRows) {
-                throw new RuntimeException(\sprintf('Export limited to %d rows, but %d rows were found. Use filters to reduce the selection.', $config->maxRows, $count));
+                throw ExportLimitExceededException::maxRowsExceeded($config->maxRows, $count);
             }
         }
 

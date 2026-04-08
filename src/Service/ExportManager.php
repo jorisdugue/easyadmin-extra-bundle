@@ -18,6 +18,8 @@ use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPreview;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
+use JorisDugue\EasyAdminExtraBundle\Exception\MissingExportContextException;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\XlsxExporter;
@@ -28,7 +30,6 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
 use ReflectionClass;
 use ReflectionException;
-use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -64,7 +65,11 @@ final readonly class ExportManager
         $this->assertGranted($config);
 
         if (!$config->supportsFormat($format)) {
-            throw new InvalidArgumentException(\sprintf('Le format "%s" n\'est pas autorisé.', $format));
+            throw InvalidExportConfigurationException::forbiddenFormat(
+                $format,
+                $crudController::class,
+                $config->formats,
+            );
         }
 
         $context = $this->createExportContext($crudController, $request, $config, $format);
@@ -80,7 +85,10 @@ final readonly class ExportManager
             ExportFormat::CSV => $this->csvExporter->export($payload),
             ExportFormat::XLSX => $this->xlsxExporter->export($payload),
             ExportFormat::JSON => $this->jsonExporter->export($payload),
-            default => throw new InvalidArgumentException(\sprintf('Le format "%s" n\'est pas supporté.', $format)),
+            default => throw InvalidExportConfigurationException::unsupportedFormat(
+                $format,
+                [ExportFormat::CSV, ExportFormat::XLSX, ExportFormat::JSON],
+            ),
         };
     }
 
@@ -138,7 +146,11 @@ final readonly class ExportManager
         }
 
         if (!$config->supportsFormat($format)) {
-            throw new InvalidArgumentException(\sprintf('Le format "%s" n\'est pas autorisé pour la prévisualisation.', $format));
+            throw InvalidExportConfigurationException::forbiddenFormat(
+                $format,
+                $crudController::class,
+                $config->formats,
+            );
         }
 
         $context = $this->createExportContext($crudController, $request, $config, $format);
@@ -245,7 +257,9 @@ final readonly class ExportManager
         }
 
         if ($config->filteredExport) {
-            throw new AccessDeniedException('A filtered export is enabled for this resource, but the current request does not contain any search, filter, or sort context.');
+            throw new AccessDeniedException(
+                'Filtered export is enabled for this resource, but the current request does not contain any search, filter, or sort context.'
+            );
         }
 
         throw new AccessDeniedException('Export is not enabled for this resource.');
@@ -273,7 +287,11 @@ final readonly class ExportManager
             $qb = $crudController->createExportAllQueryBuilder();
 
             if (!$qb instanceof QueryBuilder) {
-                throw new RuntimeException('La méthode createExportAllQueryBuilder() doit retourner un QueryBuilder Doctrine.');
+                throw InvalidExportConfigurationException::invalidExportAllQueryBuilderReturnType(
+                    $crudController::class,
+                    QueryBuilder::class,
+                    get_debug_type($qb),
+                );
             }
 
             $qb->resetDQLPart('orderBy');
@@ -282,19 +300,19 @@ final readonly class ExportManager
         }
 
         /** @var AdminContext<object>|null $context */
-        $context = $request->attributes->get(EA::CONTEXT_REQUEST_ATTRIBUTE);
+         $context = $request->attributes->get(EA::CONTEXT_REQUEST_ATTRIBUTE);
         if (null === $context) {
-            throw new RuntimeException('Unable to build a full export without an EasyAdmin request context.');
+            throw MissingExportContextException::missingRequest();
         }
 
         $search = $context->getSearch();
         if (!$search instanceof SearchDto) {
-            throw new RuntimeException('Unable to build a full export because the EasyAdmin search context is missing.');
+            throw MissingExportContextException::missingSearchDto();
         }
 
         $crud = $context->getCrud();
         if (null === $crud) {
-            throw new RuntimeException('Unable to build a full export because the EasyAdmin CRUD context is missing.');
+            throw MissingExportContextException::missingCrudContext();
         }
 
         $fields = $this->collectionFactoryCompat->createFieldCollection(
@@ -327,19 +345,20 @@ final readonly class ExportManager
         /** @var AdminContext<object>|null $context */
         $context = $request->attributes->get(EA::CONTEXT_REQUEST_ATTRIBUTE);
         if (null === $context) {
-            throw new RuntimeException('Unable to build a context export without an EasyAdmin request context.');
+            throw MissingExportContextException::missingRequest();
         }
 
         $search = $context->getSearch();
         if (!$search instanceof SearchDto) {
-            throw new RuntimeException('Unable to build a context export without an EasyAdmin search context.');
+            throw MissingExportContextException::missingSearchDto();
         }
 
         $crud = $context->getCrud();
 
         if (null === $crud) {
-            throw new RuntimeException('Unable to build a context export because the EasyAdmin CRUD context is missing.');
+            throw MissingExportContextException::missingCrudContext();
         }
+
         $fields = $this->collectionFactoryCompat->createFieldCollection(
             $crudController->configureFields(Crud::PAGE_INDEX)
         );
@@ -371,7 +390,10 @@ final readonly class ExportManager
     private function assertGranted(ExportConfig $config): void
     {
         if (null !== $config->requiredRole && !$this->authorizationChecker->isGranted($config->requiredRole)) {
-            throw new AccessDeniedException(\sprintf('Le rôle "%s" est requis pour exporter.', $config->requiredRole));
+            throw new AccessDeniedException(sprintf(
+                'The "%s" role is required to export this resource.',
+                $config->requiredRole,
+            ));
         }
     }
 

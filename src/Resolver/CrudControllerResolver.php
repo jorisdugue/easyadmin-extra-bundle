@@ -6,7 +6,7 @@ namespace JorisDugue\EasyAdminExtraBundle\Resolver;
 
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use InvalidArgumentException;
-use RuntimeException;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 final readonly class CrudControllerResolver
@@ -29,7 +29,11 @@ final readonly class CrudControllerResolver
         $controller = $this->container->get($crudControllerFqcn);
 
         if (!$controller instanceof AbstractCrudController) {
-            throw new RuntimeException(\sprintf('The service "%s" is not an instance of AbstractCrudController.', $crudControllerFqcn));
+            throw new InvalidExportConfigurationException(sprintf(
+                'The service "%s" is not an instance of "%s".',
+                $crudControllerFqcn,
+                AbstractCrudController::class,
+            ));
         }
 
         return $controller;

@@ -7,7 +7,7 @@ namespace JorisDugue\EasyAdminExtraBundle\Service;
 use BackedEnum;
 use DateTimeInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
-use RuntimeException;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportPropertyException;
 use Stringable;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
@@ -30,7 +30,7 @@ final class PropertyValueReader
         $dto = $field->getAsDto();
         $propertyPath = $dto->getProperty();
         if (null === $propertyPath || '' === trim($propertyPath)) {
-            throw new RuntimeException(\sprintf('Unable to read export field on entity "%s": the property path is missing.', $entity::class));
+            throw InvalidExportPropertyException::missingPropertyPath($label ?? '[unnamed]');
         }
 
         $fieldLabel = $dto->getLabel();
@@ -43,7 +43,12 @@ final class PropertyValueReader
         try {
             return $this->propertyAccessor->getValue($entity, $propertyPath);
         } catch (Throwable $e) {
-            throw new RuntimeException(\sprintf('Unable to read property path "%s" for export field "%s" on entity "%s".', $propertyPath, $fieldLabel, $entity::class), 0, $e);
+            throw InvalidExportPropertyException::unreadableProperty(
+                $propertyPath,
+                $label ?? $propertyPath,
+                $entity::class,
+                $e,
+            );
         }
     }
 

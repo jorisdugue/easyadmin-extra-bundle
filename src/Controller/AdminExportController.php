@@ -13,7 +13,6 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\ExportManager;
 use ReflectionException;
-use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -48,7 +47,7 @@ final class AdminExportController extends AbstractController
         }
 
         if (!\is_string($rawFormat) || '' === trim($rawFormat)) {
-            throw new RuntimeException('No export format was provided.');
+            throw new \InvalidArgumentException('No export format was provided.');
         }
         /** @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
         $crudControllerFqcn = trim($rawCrudControllerFqcn);

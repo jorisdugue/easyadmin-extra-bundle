@@ -6,7 +6,7 @@ namespace JorisDugue\EasyAdminExtraBundle\Resolver;
 
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use InvalidArgumentException;
-use RuntimeException;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 final readonly class DashboardResolver
@@ -18,13 +18,19 @@ final readonly class DashboardResolver
     public function resolve(string $dashboardControllerFqcn): AbstractDashboardController
     {
         if (!is_subclass_of($dashboardControllerFqcn, AbstractDashboardController::class)) {
-            throw new InvalidArgumentException(\sprintf('Le contrôleur "%s" n\'est pas un Dashboard EasyAdmin valide.', $dashboardControllerFqcn));
+            throw new InvalidArgumentException(sprintf(
+                'The controller "%s" is not a valid EasyAdmin dashboard controller.',
+                $dashboardControllerFqcn,
+            ));
         }
 
         $controller = $this->container->get($dashboardControllerFqcn);
 
         if (!$controller instanceof AbstractDashboardController) {
-            throw new RuntimeException(\sprintf('Le service "%s" n\'est pas une instance de AbstractDashboardController.', $dashboardControllerFqcn));
+            throw InvalidExportConfigurationException::invalidDashboardControllerService(
+                $dashboardControllerFqcn,
+                AbstractDashboardController::class,
+            );
         }
 
         return $controller;
