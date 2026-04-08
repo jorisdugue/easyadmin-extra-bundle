@@ -36,6 +36,7 @@ final class PropertyValueReader
         $dto = $field->getAsDto();
         $propertyPath = $dto->getProperty();
         $fieldLabel = $this->resolveFieldLabel($field, $propertyPath);
+
         if (null === $propertyPath || '' === trim($propertyPath)) {
             throw InvalidExportPropertyException::missingPropertyPath($fieldLabel);
         }
@@ -43,6 +44,9 @@ final class PropertyValueReader
         try {
             return $this->propertyAccessor->getValue($entity, $propertyPath);
         } catch (Throwable $e) {
+            if ($dto->isNullSafe()) {
+                return null;
+            }
             throw InvalidExportPropertyException::unreadableProperty($propertyPath, $fieldLabel, $entity::class, $e);
         }
     }

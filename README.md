@@ -1,11 +1,11 @@
 # EasyAdmin Extra Bundle
 
-![PHP](https://img.shields.io/badge/PHP-8.4%2B-blue)
-![Symfony](https://img.shields.io/badge/Symfony-8-black)
+![PHP](https://img.shields.io/badge/PHP-8.2%2B-blue)
+![Symfony](https://img.shields.io/badge/Symfony-7.4%2b-black)
 ![EasyAdmin](https://img.shields.io/badge/EasyAdmin-5-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Export and data safety tools for EasyAdmin 5 (Symfony 8, PHP 8.4+, PHP 8.5 ready)
+Export and data safety tools for EasyAdmin 5 (Symfony 7.4+, PHP 8.2+, PHP 8.5 ready)
 
 ---
 
@@ -222,6 +222,54 @@ TextExportField::new('fullName')
 ```php
 ->setTransformer(fn ($value) => $value ?? 'N/A');
 ```
+
+---
+
+### 🧩 Nested properties & null safety
+
+By default, property access is strict.
+
+If a nested property path is invalid or contains a null value, an exception is thrown:
+
+```php
+TextExportField::new('company.address.city', 'City');
+```
+
+### ✅ Safe access with nullSafe()
+
+You can safely access nested relations using nullSafe():
+
+```php
+TextExportField::new('company.address.city', 'City')
+->nullSafe();
+```
+
+If any part of the path is null or inaccessible, the value will be null instead of throwing an exception.
+
+### 🔁 Combine with default values
+
+```php
+TextExportField::new('manager.email', 'Manager')
+->nullSafe()
+->setDefault('N/A');
+```
+
+Result:
+
+- valid value → used as-is
+- null or missing → 'N/A'
+
+---
+
+### ⚠️ Important
+
+``nullSafe()`` catches property access errors, including:
+
+- null intermediate relations
+- invalid property paths (typos)
+- inaccessible properties
+
+👉 Use with caution during development to avoid hiding mistakes.
 
 ---
 

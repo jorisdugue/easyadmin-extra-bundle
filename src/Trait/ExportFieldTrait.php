@@ -115,6 +115,13 @@ trait ExportFieldTrait
         return $this;
     }
 
+    public function nullSafe(bool $nullSafe = true): static
+    {
+        $this->dto->setNullSafe($nullSafe);
+
+        return $this;
+    }
+
     public function getAsDto(): ExportFieldDto
     {
         return $this->dto;
