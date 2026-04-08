@@ -1,9 +1,11 @@
 # EasyAdmin Extra Bundle
 
+![CI](https://github.com/jorisdugue/easyadmin-extra-bundle/actions/workflows/ci.yml/badge.svg)
 ![PHP](https://img.shields.io/badge/PHP-8.2%2B-blue)
 ![Symfony](https://img.shields.io/badge/Symfony-7.4%2b-black)
 ![EasyAdmin](https://img.shields.io/badge/EasyAdmin-5-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Packagist Version](https://img.shields.io/packagist/v/jorisdugue/easyadmin-extra-bundle)
 
 Export and data safety tools for EasyAdmin 5 (Symfony 7.4+, PHP 8.2+, PHP 8.5 ready)
 
@@ -19,6 +21,7 @@ It provides:
 * 🔒 Strong security defaults (GDPR-friendly)
 * 🧩 Independent export field system
 * ⚙️ High performance (streaming, large datasets)
+* 📦 Batch export for selected rows directly from EasyAdmin
 
 ---
 
@@ -45,6 +48,7 @@ This allows you to:
 EasyAdmin is great for CRUD operations, but real-world backoffices often need more:
 
 * exporting large datasets safely
+* exporting only a selected subset of rows
 * masking sensitive data (GDPR, finance, healthcare…)
 * applying transformations at export time
 * handling large datasets efficiently
@@ -61,6 +65,7 @@ EasyAdmin is great for CRUD operations, but real-world backoffices often need mo
 * XLSX (spreadsheet export)
 * JSON export
 * Full export or filtered export (EasyAdmin context-aware)
+* Batch export for selected rows
 * Custom filename support
 * Configurable max rows
 * Field-level transformations
@@ -118,8 +123,8 @@ This bundle uses a custom route loader.
 ```yaml
 # config/routes/easyadmin_extra.yaml
 easyadmin_extra:
-resource: .
-type: jorisdugue_easyadmin_extra.routes
+  resource: .
+  type: jorisdugue_easyadmin_extra.routes
 ```
 
 Without this configuration, export routes will not be generated.
@@ -130,17 +135,17 @@ Without this configuration, export routes will not be generated.
 
 By default, the bundle scans the following directory to discover dashboards and CRUD controllers:
 
-src/Controller
+`src/Controller`
 
 If your project uses a custom structure (recommended for modular or DDD architectures), you can configure additional discovery paths:
 
 ```yaml
 # config/packages/easyadmin_extra.yaml
 joris_dugue_easyadmin_extra:
-discovery_paths:
-- '%kernel.project_dir%/src/Controller'
-- '%kernel.project_dir%/src/Admin'
-- '%kernel.project_dir%/modules'
+  discovery_paths:
+    - '%kernel.project_dir%/src/Controller'
+    - '%kernel.project_dir%/src/Admin'
+    - '%kernel.project_dir%/modules'
 ```
 
 ### 🧠 How discovery works
@@ -148,8 +153,8 @@ discovery_paths:
 The bundle will:
 
 * scan all configured directories
-* detect EasyAdmin dashboards using #[AdminDashboard]
-* detect exportable CRUD controllers using #[AdminExport]
+* detect EasyAdmin dashboards using `#[AdminDashboard]`
+* detect exportable CRUD controllers using `#[AdminExport]`
 
 👉 No specific folder structure is required.
 
@@ -169,7 +174,8 @@ use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
 #[AdminExport(
     filename: 'users_export',
     formats: ['csv', 'xlsx', 'json'],
-    maxRows: 10000
+    maxRows: 10000,
+    batchExport: true,
 )]
 class UserCrudController extends AbstractCrudController
 {
@@ -235,13 +241,13 @@ If a nested property path is invalid or contains a null value, an exception is t
 TextExportField::new('company.address.city', 'City');
 ```
 
-### ✅ Safe access with nullSafe()
+### ✅ Safe access with `nullSafe()`
 
-You can safely access nested relations using nullSafe():
+You can safely access nested relations using `nullSafe()`:
 
 ```php
 TextExportField::new('company.address.city', 'City')
-->nullSafe();
+    ->nullSafe();
 ```
 
 If any part of the path is null or inaccessible, the value will be null instead of throwing an exception.
@@ -250,24 +256,24 @@ If any part of the path is null or inaccessible, the value will be null instead 
 
 ```php
 TextExportField::new('manager.email', 'Manager')
-->nullSafe()
-->setDefault('N/A');
+    ->nullSafe()
+    ->setDefault('N/A');
 ```
 
 Result:
 
-- valid value → used as-is
-- null or missing → 'N/A'
+* valid value → used as-is
+* null or missing → `'N/A'`
 
 ---
 
 ### ⚠️ Important
 
-``nullSafe()`` catches property access errors, including:
+`nullSafe()` catches property access errors, including:
 
-- null intermediate relations
-- invalid property paths (typos)
-- inaccessible properties
+* null intermediate relations
+* invalid property paths (typos)
+* inaccessible properties
 
 👉 Use with caution during development to avoid hiding mistakes.
 
@@ -294,6 +300,38 @@ TextExportField::new('name')->position(5);
 ```
 
 Fields with a defined position are sorted first, then remaining fields keep their declaration order.
+
+---
+
+### Batch export
+
+You can export **only selected entities** directly from EasyAdmin using batch actions.
+
+```php
+#[AdminExport(
+    formats: ['csv', 'xlsx'],
+    batchExport: true,
+)]
+class UserCrudController extends AbstractCrudController
+{
+}
+```
+
+👉 This automatically adds batch export actions in EasyAdmin for supported formats.
+
+### How batch export works
+
+* select rows in the EasyAdmin list view
+* use the batch action dropdown
+* choose an export format
+* only selected entities are exported
+
+### Batch export behavior
+
+* uses Doctrine metadata to detect identifier type
+* supports integer and string identifiers
+* rejects composite identifiers with an explicit exception
+* fully reuses the export configuration (fields, masking, limits, formats)
 
 ---
 
@@ -331,6 +369,7 @@ This bundle integrates directly with EasyAdmin:
 * respects search queries
 * respects sorting
 * works directly with CRUD controllers
+* supports exporting selected rows via batch actions
 * no manual query handling required
 
 👉 Export reflects the current admin context.
@@ -339,7 +378,7 @@ This bundle integrates directly with EasyAdmin:
 
 ## 🧠 How it works
 
-```
+```text
 EasyAdmin CRUD
     ↓
 Filters / Search / QueryBuilder
@@ -356,7 +395,7 @@ Output (CSV / XLSX / JSON)
 ## 📄 Supported Formats
 
 | Format | Notes                             |
-| ------ | --------------------------------- |
+|--------|-----------------------------------|
 | CSV    | Streamed, best for large datasets |
 | XLSX   | Spreadsheet export                |
 | JSON   | Structured data                   |
@@ -427,16 +466,16 @@ This ensures:
 
 ## 🔍 Comparison
 
-| Feature              | Native EasyAdmin | This Bundle |
-| -------------------- | ---------------- | ----------- |
-| Export               | ❌                | ✅           |
-| CSV streaming        | ❌                | ✅           |
-| XLSX export          | ❌                | ✅           |
-| JSON export          | ❌                | ✅           |
-| Data masking         | ❌                | ✅           |
-| Formula protection   | ❌                | ✅           |
-| Custom export schema | ❌                | ✅           |
-| Bulk actions         | ❌                | 🚧          |
+| Feature                      | Native EasyAdmin | This Bundle |
+|------------------------------|------------------|-------------|
+| Export                       | ❌                | ✅           |
+| CSV streaming                | ❌                | ✅           |
+| XLSX export                  | ❌                | ✅           |
+| JSON export                  | ❌                | ✅           |
+| Data masking                 | ❌                | ✅           |
+| Formula protection           | ❌                | ✅           |
+| Custom export schema         | ❌                | ✅           |
+| Batch export (selected rows) | ❌                | ✅           |
 
 ---
 
@@ -451,7 +490,8 @@ This ensures:
 
 ## 🛣️ Roadmap
 
-* [ ] Bulk actions
+* [x] Batch export (selected rows)
+* [ ] Advanced batch operations (update / delete / workflows)
 * [ ] Export presets / profiles
 * [ ] Role-based field visibility
 * [ ] Additional field helpers

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportCountResolverInterface;
+use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportBatchController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportPreviewController;
 use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ExportActionExtension;
@@ -13,6 +14,7 @@ use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\XlsxExporter;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
+use JorisDugue\EasyAdminExtraBundle\Resolver\BatchIdsQueryBuilderResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportCountResolver;
@@ -40,6 +42,7 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$container', service('service_container'));
     $services->set(DashboardResolver::class)
         ->arg('$container', service('service_container'));
+    $services->set(AdminExportBatchController::class);
     $services->set(FilenameResolver::class);
     $services->set(ExportPayloadFactory::class);
     $services->set(ExportFieldFormatResolver::class);
@@ -50,6 +53,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(ExportManager::class);
     $services->set(ExportFieldValueResolver::class);
     $services->set(ExportRequestResolver::class);
+    $services->set(BatchIdsQueryBuilderResolver::class);
     $services->set(SpreadsheetCellSanitizerService::class);
     $services->set(ExportRouteMetadataResolver::class);
     $services->set(AdminExportController::class)

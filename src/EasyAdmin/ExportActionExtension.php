@@ -99,12 +99,19 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
 
         $exportActions = $this->buildExportActions($request, $context, $crudControllerFqcn, $config);
         $previewAction = $this->buildPreviewAction($request, $context, $crudControllerFqcn, $config);
-        if ([] === $exportActions) {
+        $batchActions = $this->buildBatchExportActions($context, $crudControllerFqcn, $config);
+        if ([] === $exportActions && [] === $batchActions) {
             return;
         }
 
         if (ExportActionDisplay::DROPDOWN === $config->actionDisplay) {
-            $actions->add(Crud::PAGE_INDEX, $this->buildExportDropdown($exportActions, $previewAction));
+            if ([] !== $exportActions) {
+                $actions->add(Crud::PAGE_INDEX, $this->buildExportDropdown($exportActions, $previewAction));
+            }
+
+            foreach ($batchActions as $batchAction) {
+                $actions->addBatchAction($batchAction);
+            }
 
             return;
         }
@@ -116,6 +123,48 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         if (null !== $previewAction) {
             $actions->add(Crud::PAGE_INDEX, $previewAction);
         }
+
+        foreach ($batchActions as $batchAction) {
+            $actions->addBatchAction($batchAction);
+        }
+    }
+
+    /**
+     * @param AdminContext<object> $context
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     *
+     * @return list<Action>
+     *
+     * @throws ReflectionException
+     */
+    private function buildBatchExportActions(AdminContext $context, string $crudControllerFqcn, ExportConfig $config): array
+    {
+        if (!$config->batchExport) {
+            return [];
+        }
+
+        $dashboardRouteName = $context->getDashboardRouteName();
+        $crudRouteName = $this->exportRouteMetadataResolver->resolveRouteName($crudControllerFqcn, $config);
+        $actions = [];
+
+        foreach ($this->getFormatDefinitions($config) as $format => $definition) {
+            if (!$config->supportsFormat($format)) {
+                continue;
+            }
+
+            $routeName = \sprintf('%s_%s_export_batch_%s', $dashboardRouteName, $crudRouteName, $format);
+
+            $label = 1 === \count($config->formats)
+                ? $config->batchExportLabel
+                : \sprintf('%s (%s)', $config->batchExportLabel, strtoupper($format));
+
+            $actions[] = Action::new('jdBatchExport_' . $format, $label)
+                ->linkToUrl($this->router->generate($routeName))
+                ->addCssClass('btn btn-secondary')
+                ->setIcon('fa fa-download');
+        }
+
+        return $actions;
     }
 
     /**

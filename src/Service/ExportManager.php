@@ -26,6 +26,7 @@ use JorisDugue\EasyAdminExtraBundle\Exporter\XlsxExporter;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
 use JorisDugue\EasyAdminExtraBundle\Field\ExportFieldOption;
+use JorisDugue\EasyAdminExtraBundle\Resolver\BatchIdsQueryBuilderResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
 use ReflectionClass;
@@ -50,6 +51,7 @@ final readonly class ExportManager
         private Security $security,
         private CollectionFactoryCompat $collectionFactoryCompat,
         private FilterFactory $filterFactory,
+        private BatchIdsQueryBuilderResolver $batchIdsQueryBuilderResolver,
     ) {}
 
     /**
@@ -171,6 +173,55 @@ final readonly class ExportManager
             actionDisplay: $config->actionDisplay,
             formatLabels: $formatLabels,
         );
+    }
+
+    /**
+     * Exports a manually selected set of entities identified by their IDs.
+     *
+     * This method is triggered by EasyAdmin batch actions. It receives the list
+     * of IDs submitted via the POST form and builds a scoped QueryBuilder using
+     * WHERE id IN (:ids), then delegates to the same export pipeline as export().
+     *
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     * @param list<int|string>                             $ids
+     *
+     * @throws ReflectionException
+     */
+    public function exportBatch(string $crudControllerFqcn, string $format, array $ids, Request $request): Response
+    {
+        if ([] === $ids) {
+            throw new InvalidArgumentException('Batch export requires at least one selected entity ID.');
+        }
+
+        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
+        $config = $this->exportConfigFactory->create($crudControllerFqcn);
+
+        $this->assertGranted($config);
+
+        if (!$config->batchExport) {
+            throw new AccessDeniedException('Batch export is not enabled for this resource.');
+        }
+
+        if (!$config->supportsFormat($format)) {
+            throw InvalidExportConfigurationException::forbiddenFormat($format, $crudController::class, $config->formats);
+        }
+
+        $context = $this->createExportContext($crudController, $request, $config, $format);
+        $queryBuilder = $this->batchIdsQueryBuilderResolver->resolve($crudController, $ids);
+
+        $payload = $this->exportPayloadFactory->create(
+            $crudController,
+            $queryBuilder,
+            $config,
+            $context,
+        );
+
+        return match ($format) {
+            ExportFormat::CSV => $this->csvExporter->export($payload),
+            ExportFormat::JSON => $this->jsonExporter->export($payload),
+            ExportFormat::XLSX => $this->xlsxExporter->export($payload),
+            default => throw InvalidExportConfigurationException::unsupportedFormat($format, [ExportFormat::CSV, ExportFormat::XLSX, ExportFormat::JSON]),
+        };
     }
 
     private function hasFormatSpecificPreviewVariants(ExportConfig $config): bool

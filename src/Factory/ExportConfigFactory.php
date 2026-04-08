@@ -59,6 +59,8 @@ class ExportConfigFactory
             previewEnabled: $attribute->previewEnabled,
             previewLimit: $attribute->previewLimit,
             previewLabel: $attribute->previewLabel,
+            batchExport: $attribute->batchExport,
+            batchExportLabel: $attribute->batchExportLabel,
         );
     }
 }

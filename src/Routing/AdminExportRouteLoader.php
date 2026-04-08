@@ -9,6 +9,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
+use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportBatchController;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
 use LogicException;
@@ -145,6 +146,38 @@ final class AdminExportRouteLoader extends Loader
                         [],
                         ['GET'],
                     ));
+
+                    if ($crud['batchExport']) {
+                        $batchPath = $this->joinPaths($dashboard['path'], $crud['path'], '/export/batch/' . $format);
+                        $batchRouteName = \sprintf('%s_%s_export_batch_%s', $dashboard['name'], $crud['name'], $format);
+
+                        $this->guardDuplicateRoute(
+                            $generatedRouteNames,
+                            $generatedRoutePaths,
+                            $batchRouteName,
+                            $batchPath,
+                            $dashboard['fqcn'],
+                            $crud['fqcn'],
+                        );
+
+                        $routes->add($batchRouteName, new Route(
+                            $batchPath,
+                            [
+                                '_controller' => AdminExportBatchController::class,
+                                '_jd_ea_extra_crud' => $crud['fqcn'],
+                                '_jd_ea_extra_dashboard' => $dashboard['fqcn'],
+                                '_jd_ea_extra_format' => $format,
+                                EA::CRUD_CONTROLLER_FQCN => $crud['fqcn'],
+                                EA::DASHBOARD_CONTROLLER_FQCN => $dashboard['fqcn'],
+                                EA::CRUD_ACTION => 'index',
+                            ],
+                            [],
+                            [],
+                            '',
+                            [],
+                            ['POST'],
+                        ));
+                    }
                 }
 
                 if (!$crud['previewEnabled']) {
@@ -222,7 +255,7 @@ final class AdminExportRouteLoader extends Loader
      * - AdminRoute(name, path)
      * - inferred from the CRUD controller class name
      *
-     * @return list<array{fqcn:string,name:string,path:string,formats:list<string>,previewEnabled:bool}>
+     * @return list<array{fqcn:string,name:string,path:string,formats:list<string>,previewEnabled:bool,batchExport:bool}>
      *
      * @throws InvalidArgumentException when no format is configured or when an unsupported format is found
      * @throws ReflectionException
@@ -250,6 +283,7 @@ final class AdminExportRouteLoader extends Loader
                 'name' => $this->exportRouteMetadataResolver->resolveRouteName($class, $config),
                 'formats' => $this->normalizeAndValidateFormats($config->formats, $class),
                 'previewEnabled' => $config->previewEnabled,
+                'batchExport' => $config->batchExport,
             ];
         }
 
