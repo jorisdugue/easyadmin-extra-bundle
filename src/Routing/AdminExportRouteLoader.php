@@ -44,9 +44,14 @@ use Symfony\Component\Routing\RouteCollection;
  */
 final class AdminExportRouteLoader extends Loader
 {
-    public const string ROUTE_LOADER_TYPE = 'jorisdugue_easyadmin_extra.routes';
-
-    private const array ALLOWED_FORMATS = ['csv', 'xlsx', 'json'];
+    /**
+     * @var string
+     */
+    public const ROUTE_LOADER_TYPE = 'jorisdugue_easyadmin_extra.routes';
+    /**
+     * @var list<string>
+     */
+    private const ALLOWED_FORMATS = ['csv', 'xlsx', 'json'];
 
     private bool $isLoaded = false;
 
@@ -138,7 +143,7 @@ final class AdminExportRouteLoader extends Loader
                         [],
                         '',
                         [],
-                        ['GET']
+                        ['GET'],
                     ));
                 }
 
@@ -260,7 +265,7 @@ final class AdminExportRouteLoader extends Loader
     {
         $existingDirs = array_values(array_filter(
             $this->discoveryPaths,
-            static fn (string $dir): bool => is_dir($dir)
+            static fn (string $dir): bool => is_dir($dir),
         ));
 
         if ([] === $existingDirs) {
@@ -334,7 +339,7 @@ final class AdminExportRouteLoader extends Loader
     {
         $normalizedFormats = array_values(array_unique(array_filter(
             array_map(static fn (string $f): string => strtolower(trim($f)), $formats),
-            static fn (string $f): bool => '' !== $f
+            static fn (string $f): bool => '' !== $f,
         )));
 
         if ([] === $normalizedFormats) {
@@ -343,7 +348,7 @@ final class AdminExportRouteLoader extends Loader
 
         $invalidFormats = array_values(array_filter(
             $normalizedFormats,
-            static fn (string $f): bool => !\in_array($f, self::ALLOWED_FORMATS, true)
+            static fn (string $f): bool => !\in_array($f, self::ALLOWED_FORMATS, true),
         ));
 
         if ([] !== $invalidFormats) {

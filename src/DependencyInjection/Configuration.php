@@ -73,10 +73,18 @@ final class Configuration implements ConfigurationInterface
                 '%kernel.project_dir%/src/Controller',
             ])
             ->validate()
-            ->ifTrue(static fn (mixed $paths): bool => [] !== array_filter(
-                $paths,
-                static fn (mixed $path): bool => !\is_string($path)
-            ))
+            ->ifTrue(
+                static function (mixed $paths): bool {
+                    if (!\is_array($paths)) {
+                        return true;
+                    }
+
+                    return [] !== array_filter(
+                        $paths,
+                        static fn (mixed $path): bool => !\is_string($path),
+                    );
+                },
+            )
             ->thenInvalid('The "discovery_paths" option must be a list of strings.')
             ->end()
             ->end()

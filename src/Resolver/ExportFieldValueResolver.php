@@ -22,6 +22,16 @@ readonly class ExportFieldValueResolver
         private PropertyValueReader $propertyValueReader,
     ) {}
 
+    /**
+     * Resolves the final exported string value for a field.
+     *
+     * Resolution pipeline:
+     * 1. Read the raw property value from the entity
+     * 2. Apply the custom field transformer when configured
+     * 3. Apply the field default value when the resolved value is null
+     * 4. Apply field-specific formatting
+     * 5. Normalize the result to a string
+     */
     public function resolve(object $entity, ExportFieldInterface $field): string
     {
         $dto = $field->getAsDto();
@@ -41,6 +51,9 @@ readonly class ExportFieldValueResolver
         return $this->propertyValueReader->normalize($value);
     }
 
+    /**
+     * Applies field-type-specific formatting.
+     */
     private function formatValue(mixed $value, ExportFieldDto $dto): mixed
     {
         return match ($dto->getFieldFqcn()) {
@@ -55,6 +68,9 @@ readonly class ExportFieldValueResolver
         };
     }
 
+    /**
+     * Formats a boolean-like value using the configured true/false labels.
+     */
     private function formatBoolean(mixed $value, ExportFieldDto $dto): mixed
     {
         if (null === $value) {
@@ -66,6 +82,9 @@ readonly class ExportFieldValueResolver
             : $dto->getCustomOption(BooleanExportField::OPTION_FALSE_LABEL);
     }
 
+    /**
+     * Formats a choice value using the configured choice map.
+     */
     private function formatChoice(mixed $value, ExportFieldDto $dto): mixed
     {
         if (null === $value) {
@@ -73,10 +92,22 @@ readonly class ExportFieldValueResolver
         }
 
         $choices = $dto->getCustomOption(ChoiceExportField::OPTION_CHOICES) ?? [];
+        if (!\is_array($choices)) {
+            return $value;
+        }
 
-        return $choices[$value] ?? $value;
+        $choiceKey = \is_int($value) || \is_string($value) ? $value : null;
+
+        if (null === $choiceKey) {
+            return $value;
+        }
+
+        return $choices[$choiceKey] ?? $value;
     }
 
+    /**
+     * Formats a date value using the configured date format.
+     */
     private function formatDate(mixed $value, ExportFieldDto $dto): mixed
     {
         if (!$value instanceof DateTimeInterface) {
@@ -84,10 +115,14 @@ readonly class ExportFieldValueResolver
         }
 
         $format = $dto->getCustomOption(DateExportField::OPTION_FORMAT);
+        $format = \is_string($format) && '' !== trim($format) ? $format : 'Y-m-d';
 
         return $value->format($format);
     }
 
+    /**
+     * Formats a date-time value using the configured date-time format.
+     */
     private function formatDateTime(mixed $value, ExportFieldDto $dto): mixed
     {
         if (!$value instanceof DateTimeInterface) {
@@ -95,10 +130,14 @@ readonly class ExportFieldValueResolver
         }
 
         $format = $dto->getCustomOption(DateTimeExportField::OPTION_FORMAT);
+        $format = \is_string($format) && '' !== trim($format) ? $format : 'Y-m-d H:i:s';
 
         return $value->format($format);
     }
 
+    /**
+     * Formats a numeric value using the configured decimal precision and separators.
+     */
     private function formatNumber(mixed $value, ExportFieldDto $dto): mixed
     {
         if (null === $value) {
@@ -117,10 +156,13 @@ readonly class ExportFieldValueResolver
             (float) $value,
             \is_int($decimals) ? $decimals : 2,
             \is_string($decimalSeparator) ? $decimalSeparator : '.',
-            \is_string($thousandsSeparator) ? $thousandsSeparator : ''
+            \is_string($thousandsSeparator) ? $thousandsSeparator : '',
         );
     }
 
+    /**
+     * Formats an integer value using the configured thousands separator.
+     */
     private function formatInteger(mixed $value, ExportFieldDto $dto): mixed
     {
         if (null === $value) {
@@ -137,10 +179,13 @@ readonly class ExportFieldValueResolver
             (int) $value,
             0,
             '.',
-            \is_string($thousandsSeparator) ? $thousandsSeparator : ''
+            \is_string($thousandsSeparator) ? $thousandsSeparator : '',
         );
     }
 
+    /**
+     * Formats a monetary value using the configured precision, separators and symbol options.
+     */
     private function formatMoney(mixed $value, ExportFieldDto $dto): mixed
     {
         if (null === $value) {
@@ -169,7 +214,7 @@ readonly class ExportFieldValueResolver
             $amount,
             \is_int($decimals) ? $decimals : 2,
             \is_string($decimalSeparator) ? $decimalSeparator : ',',
-            \is_string($thousandsSeparator) ? $thousandsSeparator : ' '
+            \is_string($thousandsSeparator) ? $thousandsSeparator : ' ',
         );
 
         if (!\is_string($symbol) || '' === $symbol) {

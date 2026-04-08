@@ -65,11 +65,7 @@ final readonly class ExportManager
         $this->assertGranted($config);
 
         if (!$config->supportsFormat($format)) {
-            throw InvalidExportConfigurationException::forbiddenFormat(
-                $format,
-                $crudController::class,
-                $config->formats,
-            );
+            throw InvalidExportConfigurationException::forbiddenFormat($format, $crudController::class, $config->formats);
         }
 
         $context = $this->createExportContext($crudController, $request, $config, $format);
@@ -78,17 +74,14 @@ final readonly class ExportManager
             $crudController,
             $queryBuilder,
             $config,
-            $context
+            $context,
         );
 
         return match ($format) {
             ExportFormat::CSV => $this->csvExporter->export($payload),
             ExportFormat::XLSX => $this->xlsxExporter->export($payload),
             ExportFormat::JSON => $this->jsonExporter->export($payload),
-            default => throw InvalidExportConfigurationException::unsupportedFormat(
-                $format,
-                [ExportFormat::CSV, ExportFormat::XLSX, ExportFormat::JSON],
-            ),
+            default => throw InvalidExportConfigurationException::unsupportedFormat($format, [ExportFormat::CSV, ExportFormat::XLSX, ExportFormat::JSON]),
         };
     }
 
@@ -125,7 +118,7 @@ final readonly class ExportManager
             generatedAt: new DateTimeImmutable(),
             user: $user,
             entityName: $this->guessEntityName($crudController),
-            roles: $this->resolveUserRoles($user)
+            roles: $this->resolveUserRoles($user),
         );
     }
 
@@ -146,11 +139,7 @@ final readonly class ExportManager
         }
 
         if (!$config->supportsFormat($format)) {
-            throw InvalidExportConfigurationException::forbiddenFormat(
-                $format,
-                $crudController::class,
-                $config->formats,
-            );
+            throw InvalidExportConfigurationException::forbiddenFormat($format, $crudController::class, $config->formats);
         }
 
         $context = $this->createExportContext($crudController, $request, $config, $format);
@@ -162,7 +151,7 @@ final readonly class ExportManager
             $queryBuilder,
             $config,
             $context,
-            $config->previewLimit
+            $config->previewLimit,
         );
 
         $formatLabels = [];
@@ -180,7 +169,7 @@ final readonly class ExportManager
             rows: $rows,
             showFormatPreviewActions: $this->hasFormatSpecificPreviewVariants($config),
             actionDisplay: $config->actionDisplay,
-            formatLabels: $formatLabels
+            formatLabels: $formatLabels,
         );
     }
 
@@ -257,9 +246,7 @@ final readonly class ExportManager
         }
 
         if ($config->filteredExport) {
-            throw new AccessDeniedException(
-                'Filtered export is enabled for this resource, but the current request does not contain any search, filter, or sort context.'
-            );
+            throw new AccessDeniedException('Filtered export is enabled for this resource, but the current request does not contain any search, filter, or sort context.');
         }
 
         throw new AccessDeniedException('Export is not enabled for this resource.');
@@ -274,7 +261,7 @@ final readonly class ExportManager
             [],
             [],
             [],
-            $searchDto->getSearchMode()
+            $searchDto->getSearchMode(),
         );
     }
 
@@ -287,11 +274,7 @@ final readonly class ExportManager
             $qb = $crudController->createExportAllQueryBuilder();
 
             if (!$qb instanceof QueryBuilder) {
-                throw InvalidExportConfigurationException::invalidExportAllQueryBuilderReturnType(
-                    $crudController::class,
-                    QueryBuilder::class,
-                    get_debug_type($qb),
-                );
+                throw InvalidExportConfigurationException::invalidExportAllQueryBuilderReturnType($crudController::class, QueryBuilder::class, get_debug_type($qb));
             }
 
             $qb->resetDQLPart('orderBy');
@@ -300,7 +283,7 @@ final readonly class ExportManager
         }
 
         /** @var AdminContext<object>|null $context */
-         $context = $request->attributes->get(EA::CONTEXT_REQUEST_ATTRIBUTE);
+        $context = $request->attributes->get(EA::CONTEXT_REQUEST_ATTRIBUTE);
         if (null === $context) {
             throw MissingExportContextException::missingRequest();
         }
@@ -316,20 +299,20 @@ final readonly class ExportManager
         }
 
         $fields = $this->collectionFactoryCompat->createFieldCollection(
-            $crudController->configureFields(Crud::PAGE_INDEX)
+            $crudController->configureFields(Crud::PAGE_INDEX),
         );
 
         $filters = $this->filterFactory->create(
             $crud->getFiltersConfig(),
             $fields,
-            $context->getEntity()
+            $context->getEntity(),
         );
 
         $qb = $crudController->createIndexQueryBuilder(
             $this->createEmptySearchDto($search, $request),
             $context->getEntity(),
             $fields,
-            $filters
+            $filters,
         );
 
         $qb->resetDQLPart('orderBy');
@@ -360,20 +343,20 @@ final readonly class ExportManager
         }
 
         $fields = $this->collectionFactoryCompat->createFieldCollection(
-            $crudController->configureFields(Crud::PAGE_INDEX)
+            $crudController->configureFields(Crud::PAGE_INDEX),
         );
 
         $filters = $this->filterFactory->create(
             $crud->getFiltersConfig(),
             $fields,
-            $context->getEntity()
+            $context->getEntity(),
         );
 
         $qb = $crudController->createIndexQueryBuilder(
             $search,
             $context->getEntity(),
             $fields,
-            $filters
+            $filters,
         );
 
         return $this->stripPagination($qb);
@@ -390,10 +373,7 @@ final readonly class ExportManager
     private function assertGranted(ExportConfig $config): void
     {
         if (null !== $config->requiredRole && !$this->authorizationChecker->isGranted($config->requiredRole)) {
-            throw new AccessDeniedException(sprintf(
-                'The "%s" role is required to export this resource.',
-                $config->requiredRole,
-            ));
+            throw new AccessDeniedException(\sprintf('The "%s" role is required to export this resource.', $config->requiredRole));
         }
     }
 
@@ -404,7 +384,7 @@ final readonly class ExportManager
      */
     private function guessEntityName(AbstractCrudController $crudController): string
     {
-        $short = new ReflectionClass($crudController::getEntityFqcn())->getShortName();
+        $short = (new ReflectionClass($crudController::getEntityFqcn()))->getShortName();
         $short = preg_replace('/(?<!^)[A-Z]/', '_$0', $short) ?? $short;
 
         return strtolower($short);

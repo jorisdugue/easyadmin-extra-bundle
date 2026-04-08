@@ -6,7 +6,4 @@ namespace JorisDugue\EasyAdminExtraBundle\Exception;
 
 use RuntimeException;
 
-abstract class EasyAdminExtraException extends RuntimeException
-{
-
-}
+abstract class EasyAdminExtraException extends RuntimeException {}

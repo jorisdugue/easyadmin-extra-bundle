@@ -35,10 +35,7 @@ class ExportConfigFactory
         }
 
         if (!is_subclass_of($controllerFqcn, ExportFieldsProviderInterface::class)) {
-            throw InvalidExportConfigurationException::missingExportFieldsProvider(
-                $controllerFqcn,
-                ExportFieldsProviderInterface::class
-            );
+            throw InvalidExportConfigurationException::missingExportFieldsProvider($controllerFqcn, ExportFieldsProviderInterface::class);
         }
 
         /** @var AdminExport $attribute */

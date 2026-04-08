@@ -17,9 +17,15 @@ final class IntegerExportField implements ExportFieldInterface
     use ExportFieldRoleTrait;
     use ExportFieldTrait;
 
-    public const string OPTION_THOUSANDS_SEPARATOR = 'thousands_separator';
+    /**
+     * @var string
+     */
+    public const OPTION_THOUSANDS_SEPARATOR = 'thousands_separator';
 
-    private const string DEFAULT_THOUSANDS_SEPARATOR = '';
+    /**
+     * @var string
+     */
+    private const DEFAULT_THOUSANDS_SEPARATOR = '';
 
     public static function new(string $propertyName, ?string $label = null): static
     {

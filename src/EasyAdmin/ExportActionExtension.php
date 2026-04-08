@@ -141,7 +141,7 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
             $actions[] = Action::new($definition['action'], $definition['label'])
                 ->linkToUrl(fn () => $this->router->generate(
                     \sprintf('%s_%s_export_%s', $dashboardRouteName, $crudRouteName, $format),
-                    $currentQuery
+                    $currentQuery,
                 ))
                 ->createAsGlobalAction();
         }
@@ -169,7 +169,7 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         return Action::new('jdExportPreview', $config->previewLabel)
             ->linkToUrl(fn (): string => $this->router->generate(
                 \sprintf('%s_%s_export_preview', $dashboardRouteName, $crudRouteName),
-                $currentQuery
+                $currentQuery,
             ))
             ->createAsGlobalAction();
     }

@@ -18,19 +18,13 @@ final readonly class DashboardResolver
     public function resolve(string $dashboardControllerFqcn): AbstractDashboardController
     {
         if (!is_subclass_of($dashboardControllerFqcn, AbstractDashboardController::class)) {
-            throw new InvalidArgumentException(sprintf(
-                'The controller "%s" is not a valid EasyAdmin dashboard controller.',
-                $dashboardControllerFqcn,
-            ));
+            throw new InvalidArgumentException(\sprintf('The controller "%s" is not a valid EasyAdmin dashboard controller.', $dashboardControllerFqcn));
         }
 
         $controller = $this->container->get($dashboardControllerFqcn);
 
         if (!$controller instanceof AbstractDashboardController) {
-            throw InvalidExportConfigurationException::invalidDashboardControllerService(
-                $dashboardControllerFqcn,
-                AbstractDashboardController::class,
-            );
+            throw InvalidExportConfigurationException::invalidDashboardControllerService($dashboardControllerFqcn, AbstractDashboardController::class);
         }
 
         return $controller;

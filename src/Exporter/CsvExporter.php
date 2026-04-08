@@ -61,7 +61,7 @@ final readonly class CsvExporter
                     $this->sanitizerService->sanitizeRow($payload->headers, false),
                     ';',
                     '"',
-                    ''
+                    '',
                 )) {
                     throw new RuntimeException('Unable to write CSV header.');
                 }
@@ -74,7 +74,7 @@ final readonly class CsvExporter
                         $this->sanitizerService->sanitizeRow($row, $payload->allowSpreadsheetFormulas),
                         ';',
                         '"',
-                        ''
+                        '',
                     )) {
                         throw new RuntimeException('Unable to write CSV row.');
                     }
@@ -95,7 +95,7 @@ final readonly class CsvExporter
 
         $disposition = $response->headers->makeDisposition(
             ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-            $filename
+            $filename,
         );
 
         $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');

@@ -11,11 +11,11 @@ $finder = Finder::create()
         __DIR__ . '/tests',
     ]);
 
-return new Config()
+return (new Config())
     ->setRiskyAllowed(true)
     ->setRules([
         '@PER-CS' => true,
-        '@PHP8x4Migration' => true,
+        '@PHP8x2Migration' => true,
         '@Symfony' => true,
         '@Symfony:risky' => true,
 
@@ -29,12 +29,20 @@ return new Config()
             'import_constants' => false,
             'import_functions' => false,
         ],
+        'method_argument_space' => [
+            'on_multiline' => 'ensure_fully_multiline',
+        ],
         'single_line_empty_body' => true,
         'no_superfluous_phpdoc_tags' => true,
         'phpdoc_summary' => false,
         'phpdoc_align' => false,
         'concat_space' => [
             'spacing' => 'one',
+        ],
+        'no_singleline_whitespace_before_semicolons' => false,
+        'no_multiline_whitespace_around_double_arrow' => false,
+        'trailing_comma_in_multiline' => [
+            'elements' => ['arguments', 'arrays'],
         ],
     ])
     ->setFinder($finder);

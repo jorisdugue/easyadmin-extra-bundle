@@ -29,11 +29,7 @@ final readonly class CrudControllerResolver
         $controller = $this->container->get($crudControllerFqcn);
 
         if (!$controller instanceof AbstractCrudController) {
-            throw new InvalidExportConfigurationException(sprintf(
-                'The service "%s" is not an instance of "%s".',
-                $crudControllerFqcn,
-                AbstractCrudController::class,
-            ));
+            throw new InvalidExportConfigurationException(\sprintf('The service "%s" is not an instance of "%s".', $crudControllerFqcn, AbstractCrudController::class));
         }
 
         return $controller;

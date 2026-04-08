@@ -55,7 +55,7 @@ trait ExportFieldTrait
         $this->dto->setTransformer(
             $callback instanceof Closure
                 ? $callback
-                : Closure::fromCallable($callback)
+                : Closure::fromCallable($callback),
         );
 
         return $this;

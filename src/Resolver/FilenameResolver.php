@@ -7,7 +7,6 @@ namespace JorisDugue\EasyAdminExtraBundle\Resolver;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
-use RuntimeException;
 
 final class FilenameResolver
 {
@@ -16,9 +15,7 @@ final class FilenameResolver
         if (method_exists($crudController, 'buildExportFilename')) {
             $value = $crudController->buildExportFilename($context);
             if (!\is_string($value) || '' === trim($value)) {
-                throw new InvalidExportConfigurationException(
-                    'The buildExportFilename() method must return a non-empty string.'
-                );
+                throw new InvalidExportConfigurationException('The buildExportFilename() method must return a non-empty string.');
             }
 
             return $this->sanitize($value);

@@ -19,7 +19,7 @@ trait ExportFieldFormatAssertionsTrait
 
         self::assertSame(
             ['csv'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS),
         );
     }
 
@@ -30,7 +30,7 @@ trait ExportFieldFormatAssertionsTrait
 
         self::assertSame(
             ['csv', 'json'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS),
         );
     }
 
@@ -41,7 +41,7 @@ trait ExportFieldFormatAssertionsTrait
 
         self::assertSame(
             ['json'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::HIDDEN_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::HIDDEN_FORMATS),
         );
     }
 
@@ -52,7 +52,7 @@ trait ExportFieldFormatAssertionsTrait
 
         self::assertSame(
             ['json', 'xlsx'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::HIDDEN_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::HIDDEN_FORMATS),
         );
     }
 
@@ -63,7 +63,7 @@ trait ExportFieldFormatAssertionsTrait
 
         self::assertSame(
             ['xlsx'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS),
         );
     }
 
@@ -74,7 +74,7 @@ trait ExportFieldFormatAssertionsTrait
 
         self::assertSame(
             ['csv' => 'Montant TTC'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS),
         );
     }
 
@@ -91,7 +91,7 @@ trait ExportFieldFormatAssertionsTrait
                 'csv' => 'Montant TTC',
                 'json' => 'total_ttc',
             ],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS),
         );
     }
 
@@ -107,7 +107,7 @@ trait ExportFieldFormatAssertionsTrait
                 'csv' => 'A',
                 'json' => 'B',
             ],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS),
         );
     }
 
@@ -120,7 +120,7 @@ trait ExportFieldFormatAssertionsTrait
 
         self::assertSame(
             ['csv' => 'B'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS),
         );
     }
 

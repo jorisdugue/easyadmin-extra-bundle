@@ -33,7 +33,7 @@ trait ExportFieldFormatTrait
     {
         return $this->setCustomOption(
             ExportFieldOption::VISIBLE_FORMATS,
-            ExportFormat::normalizeMany($formats)
+            ExportFormat::normalizeMany($formats),
         );
     }
 
@@ -46,7 +46,7 @@ trait ExportFieldFormatTrait
     {
         return $this->setCustomOption(
             ExportFieldOption::HIDDEN_FORMATS,
-            ExportFormat::normalizeMany($formats)
+            ExportFormat::normalizeMany($formats),
         );
     }
 

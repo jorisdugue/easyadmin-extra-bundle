@@ -30,7 +30,10 @@ final class ChoiceExportField implements ExportFieldInterface
     use ExportFieldRoleTrait;
     use ExportFieldTrait;
 
-    public const string OPTION_CHOICES = 'choices';
+    /**
+     * @var string
+     */
+    public const OPTION_CHOICES = 'choices';
 
     /**
      * Creates a new choice export field.

@@ -31,7 +31,7 @@ final class XlsxExporterTest extends TestCase
         self::assertInstanceOf(BinaryFileResponse::class, $response);
         self::assertSame(
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            (string) $response->headers->get('Content-Type')
+            (string) $response->headers->get('Content-Type'),
         );
         self::assertStringContainsString('users.xlsx', (string) $response->headers->get('Content-Disposition'));
 

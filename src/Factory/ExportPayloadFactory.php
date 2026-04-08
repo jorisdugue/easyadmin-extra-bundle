@@ -44,26 +44,33 @@ final readonly class ExportPayloadFactory
     private function normalizeMappedRow(array $mappedRow, array $enabledFields): array
     {
         $normalized = [];
+        $expectedKeys = [];
 
         foreach ($enabledFields as $field) {
             $property = $field->getAsDto()->getProperty();
+            $label = $field->getAsDto()->getLabel();
+            if (!\is_string($label) || '' === trim($label)) {
+                $label = '[unnamed]';
+            }
 
             if (null === $property || '' === trim($property)) {
-                throw InvalidExportConfigurationException::missingFieldProperty(
-                    $field->getAsDto()->getLabel() ?? '[unnamed]'
-                );
+                throw InvalidExportConfigurationException::missingFieldProperty($label);
             }
 
-            if (!\array_key_exists($property, $mappedRow)) {
-                throw InvalidMappedExportRowException::missingProperty(
-                    $property,
-                    array_values(array_map(
-                        static fn (ExportFieldInterface $f): string => (string) $f->getAsDto()->getProperty(),
-                        $enabledFields
-                    )),
-                    array_values(array_map('strval', array_keys($mappedRow))),
-                );
-            }
+            $expectedKeys[] = $property;
+        }
+
+        /** @var list<string> $actualKeys */
+        $actualKeys = array_values(array_map('strval', array_keys($mappedRow)));
+
+        /** @var list<string> $missingKeys */
+        $missingKeys = array_values(array_diff($expectedKeys, $actualKeys));
+
+        if ([] !== $missingKeys) {
+            throw InvalidMappedExportRowException::missingProperties($missingKeys, $expectedKeys, $actualKeys);
+        }
+
+        foreach ($expectedKeys as $property) {
             $normalized[] = $mappedRow[$property];
         }
 
@@ -93,6 +100,10 @@ final readonly class ExportPayloadFactory
         $em = $qb->getEntityManager();
 
         foreach ($qb->getQuery()->toIterable() as $entity) {
+            if (!\is_object($entity)) {
+                continue;
+            }
+
             if ($crudController instanceof CustomExportRowMapperInterface) {
                 $mappedRow = $crudController->mapExportRow($entity);
                 yield $this->normalizeMappedRow($mappedRow, $enabledFields);
@@ -192,7 +203,7 @@ final readonly class ExportPayloadFactory
     {
         return array_map(
             fn (ExportFieldInterface $field): string => $this->exportFieldFormatResolver->resolveHeader($field->getAsDto(), $format, $roles),
-            $enabledFields
+            $enabledFields,
         );
     }
 
@@ -208,16 +219,18 @@ final readonly class ExportPayloadFactory
         return array_map(
             static function (ExportFieldInterface $field): string {
                 $property = $field->getAsDto()->getProperty();
+                $label = $field->getAsDto()->getLabel();
+                if (!\is_string($label) || '' === trim($label)) {
+                    $label = '[unnamed]';
+                }
 
                 if (null === $property || '' === trim($property)) {
-                    throw InvalidExportConfigurationException::missingFieldProperty(
-                        $field->getAsDto()->getLabel() ?? '[unnamed]'
-                    );
+                    throw InvalidExportConfigurationException::missingFieldProperty($label);
                 }
 
                 return $property;
             },
-            $enabledFields
+            $enabledFields,
         );
     }
 
@@ -313,12 +326,12 @@ final readonly class ExportPayloadFactory
                 }
 
                 return $left['index'] <=> $right['index'];
-            }
+            },
         );
 
         return array_map(
             static fn (array $item): ExportFieldInterface => $item['field'],
-            $decorated
+            $decorated,
         );
     }
 }

@@ -6,13 +6,19 @@ namespace JorisDugue\EasyAdminExtraBundle\Trait;
 
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
+use JorisDugue\EasyAdminExtraBundle\Util\ValueStringifier;
 
 trait ExportFieldMaskTrait
 {
+    /**
+     * Registers a value transformer for the field
+     */
     abstract public function setTransformer(callable $callback): static;
 
     /**
      * Replace the exported value with a fixed replacement string.
+     *
+     * When $preserveNull is true, null values remain null instead of being replaced.
      */
     public function mask(string $replacement = '***', bool $preserveNull = true): static
     {
@@ -21,21 +27,23 @@ trait ExportFieldMaskTrait
                 mixed $value,
                 object $entity,
                 ExportFieldInterface $field,
-            ) use ($replacement, $preserveNull): mixed {
+            ) use ($replacement, $preserveNull): ?string {
                 if (null === $value && $preserveNull) {
                     return null;
                 }
 
                 return $replacement;
-            }
+            },
         );
     }
 
     /**
-     * Conditionally masks the exported value.
+     * Replaces the exported value with a fixed replacement string when the given condition returns true.
      *
      * Expected condition signature:
      * callable(mixed $value, object $entity, ExportFieldInterface $field): bool
+     *
+     * When $preserveNull is true, null values remain null instead of being replaced.
      */
     public function maskIf(
         callable $condition,
@@ -57,12 +65,12 @@ trait ExportFieldMaskTrait
                 }
 
                 return $replacement;
-            }
+            },
         );
     }
 
     /**
-     * Redacts the exported value using a fixed replacement string.
+     * Replaces the exported value with a redacted placeholder.
      */
     public function redact(string $replacement = '[REDACTED]'): static
     {
@@ -70,7 +78,7 @@ trait ExportFieldMaskTrait
     }
 
     /**
-     * Conditionally redacts the exported value using a fixed replacement string.
+     * Replaces the exported value with a redacted placeholder when the given condition returns true.
      */
     public function redactIf(
         callable $condition,
@@ -81,7 +89,21 @@ trait ExportFieldMaskTrait
     }
 
     /**
-     * Partially masks the exported value.
+     * Masks part of the exported value while keeping a configurable number of characters visible.
+     *
+     * The resulting value keeps the first $visibleStart characters and the last $visibleEnd characters,
+     * while replacing the middle part with repeated $maskCharacter characters.
+     *
+     * Examples:
+     * - partialMask(0, 2) on "secret@example.com" => "****************om"
+     * - partialMask(2, 2) on "secret@example.com" => "se**************om"
+     * - partialMask(0, 0) on "secret" => "******"
+     *
+     * When $preserveNull is true, null values remain null.
+     * Non-stringable values are converted to an empty string.
+     *
+     * @throws InvalidArgumentException when $visibleStart or $visibleEnd is negative
+     *                                  or when $maskCharacter is empty
      */
     public function partialMask(
         int $visibleStart = 0,
@@ -106,16 +128,12 @@ trait ExportFieldMaskTrait
                 mixed $value,
                 object $entity,
                 ExportFieldInterface $field,
-            ) use ($visibleStart, $visibleEnd, $maskCharacter, $preserveNull): mixed {
+            ) use ($visibleStart, $visibleEnd, $maskCharacter, $preserveNull): ?string {
                 if (null === $value && $preserveNull) {
                     return null;
                 }
 
-                if (null === $value) {
-                    return null;
-                }
-
-                $string = (string) $value;
+                $string = ValueStringifier::stringify($value);
                 $length = mb_strlen($string);
 
                 if (0 === $length) {
@@ -135,7 +153,7 @@ trait ExportFieldMaskTrait
                 $maskedLength = $length - $visibleStart - $visibleEnd;
 
                 return $start . str_repeat($maskCharacter, $maskedLength) . $end;
-            }
+            },
         );
     }
 }

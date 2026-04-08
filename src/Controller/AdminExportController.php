@@ -8,6 +8,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Contracts\Controller\DashboardControllerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Factory\AdminContextFactory;
+use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
@@ -47,7 +48,7 @@ final class AdminExportController extends AbstractController
         }
 
         if (!\is_string($rawFormat) || '' === trim($rawFormat)) {
-            throw new \InvalidArgumentException('No export format was provided.');
+            throw new InvalidArgumentException('No export format was provided.');
         }
         /** @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
         $crudControllerFqcn = trim($rawCrudControllerFqcn);
@@ -55,14 +56,15 @@ final class AdminExportController extends AbstractController
         $dashboardControllerFqcn = trim($rawDashboardControllerFqcn);
         $format = ExportFormat::normalize($rawFormat);
 
-        $crudAction = $request->attributes->get(EA::CRUD_ACTION);
-        // Force to build a new contexte of EA or this will be not working
+        $rawCrudAction = $request->attributes->get(EA::CRUD_ACTION);
+        $crudAction = \is_string($rawCrudAction) && '' !== trim($rawCrudAction) ? trim($rawCrudAction) : null;
+
+        // Build a fresh EasyAdmin context for the targeted export request.
         $context = $this->adminContextFactory->create(
             $request,
             $this->dashboardResolver->resolve($dashboardControllerFqcn),
             $this->controllerResolver->resolve($crudControllerFqcn),
-            // Force here for contexte datas
-            $crudAction
+            $crudAction,
         );
         $request->attributes->set(EA::CONTEXT_REQUEST_ATTRIBUTE, $context);
 

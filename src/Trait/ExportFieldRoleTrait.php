@@ -30,7 +30,7 @@ trait ExportFieldRoleTrait
     {
         return $this->setCustomOption(
             ExportFieldOption::VISIBLE_ROLES,
-            $this->normalizeRoles($roles)
+            $this->normalizeRoles($roles),
         );
     }
 
@@ -51,7 +51,7 @@ trait ExportFieldRoleTrait
     {
         return $this->setCustomOption(
             ExportFieldOption::HIDDEN_ROLES,
-            $this->normalizeRoles($roles)
+            $this->normalizeRoles($roles),
         );
     }
 

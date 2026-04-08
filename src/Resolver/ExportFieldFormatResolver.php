@@ -7,9 +7,13 @@ namespace JorisDugue\EasyAdminExtraBundle\Resolver;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportFieldDto;
 use JorisDugue\EasyAdminExtraBundle\Field\ExportFieldOption;
+use JorisDugue\EasyAdminExtraBundle\Util\ValueStringifier;
 
 final class ExportFieldFormatResolver
 {
+    /**
+     * Determines whether a field is visible for the given export format.
+     */
     private function isVisibleForFormat(ExportFieldDto $dto, string $format): bool
     {
         $visibleFormats = $dto->getCustomOption(ExportFieldOption::VISIBLE_FORMATS);
@@ -27,6 +31,8 @@ final class ExportFieldFormatResolver
     }
 
     /**
+     * Determines whether a field is visible for the given security roles.
+     *
      * @param list<string> $roles
      */
     private function isVisibleForRoles(ExportFieldDto $dto, array $roles): bool
@@ -56,6 +62,8 @@ final class ExportFieldFormatResolver
     }
 
     /**
+     * Determines whether a field should be visible for the given format and roles.
+     *
      * @param list<string> $roles
      */
     public function isVisible(ExportFieldDto $dto, string $format, array $roles = []): bool
@@ -63,11 +71,18 @@ final class ExportFieldFormatResolver
         $format = $this->normalizeFormat($format);
         $roles = $this->normalizeRoles($roles);
 
-        return $this->isVisibleForFormat($dto, $format)
-            && $this->isVisibleForRoles($dto, $roles);
+        return $this->isVisibleForFormat($dto, $format) && $this->isVisibleForRoles($dto, $roles);
     }
 
     /**
+     * Resolves the exported header label for the given field, format and roles.
+     *
+     * Resolution order:
+     * 1. Role-specific label
+     * 2. Format-specific label
+     * 3. Default field label
+     * 4. Field property name
+     *
      * @param list<string> $roles
      */
     public function resolveHeader(ExportFieldDto $dto, string $format, array $roles = []): string
@@ -79,35 +94,38 @@ final class ExportFieldFormatResolver
         if (\is_array($roleLabels) && [] !== $roleLabels) {
             foreach ($roles as $role) {
                 if (\array_key_exists($role, $roleLabels)) {
-                    $label = $roleLabels[$role];
+                    $label = ValueStringifier::stringify($roleLabels[$role]);
 
-                    if (null !== $label && '' !== trim((string) $label)) {
-                        return (string) $label;
+                    if ('' !== trim($label)) {
+                        return $label;
                     }
                 }
             }
         }
-
         $formatLabels = $dto->getCustomOption(ExportFieldOption::FORMAT_LABELS);
 
         if (\is_array($formatLabels) && \array_key_exists($format, $formatLabels)) {
-            $label = $formatLabels[$format];
+            $label = ValueStringifier::stringify($formatLabels[$format]);
 
-            if (null !== $label && '' !== trim((string) $label)) {
-                return (string) $label;
+            if ('' !== trim($label)) {
+                return $label;
             }
         }
 
         $label = $dto->getLabel();
         $property = $dto->getProperty();
+        $normalizedLabel = false !== $label && null !== $label ? ValueStringifier::stringify($label) : '';
 
-        if (false === $label || null === $label || '' === trim((string) $label)) {
+        if ('' === trim($normalizedLabel)) {
             return $property ?? '';
         }
 
-        return $label;
+        return $normalizedLabel;
     }
 
+    /**
+     * Normalizes an export format name.
+     */
     private function normalizeFormat(string $format): string
     {
         $format = strtolower(trim($format));
@@ -120,6 +138,8 @@ final class ExportFieldFormatResolver
     }
 
     /**
+     * Normalizes security roles by trimming, uppercasing and deduplicating them.
+     *
      * @param list<string> $roles
      *
      * @return list<string>
