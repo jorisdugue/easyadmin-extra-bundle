@@ -27,12 +27,18 @@ final class BooleanExportField implements ExportFieldInterface
     use ExportFieldRoleTrait;
     use ExportFieldTrait;
 
-    public const string OPTION_TRUE_LABEL = 'true_label';
-    public const string OPTION_FALSE_LABEL = 'false_label';
+    /**
+     * @var string
+     */
+    public const OPTION_TRUE_LABEL = 'true_label';
+    /**
+     * @var string
+     */
+    public const OPTION_FALSE_LABEL = 'false_label';
 
     public static function new(string $propertyName, ?string $label = null): static
     {
-        return new self()
+        return (new self())
             ->setFieldFqcn(self::class)
             ->setProperty($propertyName)
             ->setLabel($label)

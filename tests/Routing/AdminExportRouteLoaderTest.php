@@ -91,8 +91,11 @@ final class AdminExportRouteLoaderTest extends TestCase
      *
      * @return array{0: string, 1: string}
      */
-    private function createProjectWithControllers(string $name, array $formats = ['csv', 'json']): array
-    {
+    private function createProjectWithControllers(
+        string $name,
+        array $formats = ['csv', 'json'],
+        bool $batchExport = false
+    ): array {
         $projectDir = sys_get_temp_dir() . '/jd_ea_extra_' . $name . '_' . uniqid('', true);
         $controllerDir = $projectDir . '/src/Controller';
 
@@ -117,6 +120,7 @@ final class AdminExportRouteLoaderTest extends TestCase
             PHP);
 
         $formatsCode = var_export($formats, true);
+        $batchExportCode = $batchExport ? 'true' : 'false';
 
         file_put_contents($controllerDir . '/ProductCrudController.php', <<<PHP
             <?php
@@ -130,7 +134,7 @@ final class AdminExportRouteLoaderTest extends TestCase
             use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
             use JorisDugue\EasyAdminExtraBundle\Field\TextExportField;
 
-            #[AdminExport(formats: {$formatsCode})]
+            #[AdminExport(formats: {$formatsCode}, batchExport: {$batchExportCode})]
             final class ProductCrudController extends AbstractCrudController implements ExportFieldsProviderInterface
             {
                 public static function getEntityFqcn(): string
@@ -189,7 +193,7 @@ final class AdminExportRouteLoaderTest extends TestCase
             use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
             use JorisDugue\EasyAdminExtraBundle\Field\TextExportField;
 
-            #[AdminExport(formats: ['csv'])]
+            #[AdminExport(formats: ['csv'], batchExport: false)]
             final class ProductCrudController extends AbstractCrudController implements ExportFieldsProviderInterface
             {
                 public static function getEntityFqcn(): string
@@ -280,5 +284,91 @@ final class AdminExportRouteLoaderTest extends TestCase
 
         self::assertCount(2, $routes);
         self::assertNotNull($routes->get('admin_product_export_csv'));
+    }
+
+    public function testLoadBuildsBatchRoutesWhenBatchExportIsEnabled(): void
+    {
+        [$projectDir] = $this->createProjectWithControllers('batch_enabled', ['csv', 'json'], true);
+
+        require_once $projectDir . '/src/Controller/AdminDashboardController.php';
+        require_once $projectDir . '/src/Controller/ProductCrudController.php';
+
+        $loader = new AdminExportRouteLoader(
+            [$projectDir],
+            new ExportConfigFactory(),
+            new ExportRouteMetadataResolver(),
+        );
+
+        $routes = $loader->load(null, AdminExportRouteLoader::ROUTE_LOADER_TYPE);
+
+        self::assertCount(4, $routes);
+
+        self::assertNotNull($routes->get('admin_product_export_csv'));
+        self::assertNotNull($routes->get('admin_product_export_json'));
+        self::assertNotNull($routes->get('admin_product_export_batch_csv'));
+        self::assertNotNull($routes->get('admin_product_export_batch_json'));
+    }
+
+    public function testLoadBuildsBatchRoutePathsWhenBatchExportIsEnabled(): void
+    {
+        [$projectDir] = $this->createProjectWithControllers('batch_paths', ['csv'], true);
+
+        require_once $projectDir . '/src/Controller/AdminDashboardController.php';
+        require_once $projectDir . '/src/Controller/ProductCrudController.php';
+
+        $loader = new AdminExportRouteLoader(
+            [$projectDir],
+            new ExportConfigFactory(),
+            new ExportRouteMetadataResolver(),
+        );
+
+        $routes = $loader->load(null, AdminExportRouteLoader::ROUTE_LOADER_TYPE);
+
+        self::assertCount(2, $routes);
+        self::assertSame('/admin/product/export/csv', $routes->get('admin_product_export_csv')?->getPath());
+        self::assertSame('/admin/product/export/batch/csv', $routes->get('admin_product_export_batch_csv')?->getPath());
+    }
+
+    public function testBatchRoutesOnlyAllowPostMethod(): void
+    {
+        [$projectDir] = $this->createProjectWithControllers('batch_methods', ['csv'], true);
+
+        require_once $projectDir . '/src/Controller/AdminDashboardController.php';
+        require_once $projectDir . '/src/Controller/ProductCrudController.php';
+
+        $loader = new AdminExportRouteLoader(
+            [$projectDir],
+            new ExportConfigFactory(),
+            new ExportRouteMetadataResolver(),
+        );
+
+        $routes = $loader->load(null, AdminExportRouteLoader::ROUTE_LOADER_TYPE);
+
+        $route = $routes->get('admin_product_export_batch_csv');
+
+        self::assertNotNull($route);
+        self::assertSame(['POST'], $route->getMethods());
+    }
+
+    public function testLoadDoesNotBuildBatchRoutesWhenBatchExportIsDisabled(): void
+    {
+        [$projectDir] = $this->createProjectWithControllers('batch_disabled', ['csv', 'json'], false);
+
+        require_once $projectDir . '/src/Controller/AdminDashboardController.php';
+        require_once $projectDir . '/src/Controller/ProductCrudController.php';
+
+        $loader = new AdminExportRouteLoader(
+            [$projectDir],
+            new ExportConfigFactory(),
+            new ExportRouteMetadataResolver(),
+        );
+
+        $routes = $loader->load(null, AdminExportRouteLoader::ROUTE_LOADER_TYPE);
+
+        self::assertCount(2, $routes);
+        self::assertNotNull($routes->get('admin_product_export_csv'));
+        self::assertNotNull($routes->get('admin_product_export_json'));
+        self::assertNull($routes->get('admin_product_export_batch_csv'));
+        self::assertNull($routes->get('admin_product_export_batch_json'));
     }
 }

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace JorisDugue\EasyAdminExtraBundle\Support;
 
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Contracts\Field\FieldInterface;
 
 final class CollectionFactoryCompat
 {
     /**
-     * @param iterable<mixed> $fields
+     * @param iterable<FieldInterface|string> $fields
      */
     public function createFieldCollection(iterable $fields): FieldCollection
     {

@@ -32,6 +32,8 @@ final readonly class ExportConfig
         public bool $previewEnabled = false,
         public int $previewLimit = 20,
         public string $previewLabel = 'Preview export',
+        public bool $batchExport = true,
+        public string $batchExportLabel = 'Export selection',
     ) {}
 
     public function getDefaultFormat(): string

@@ -27,7 +27,7 @@ final class ExportFieldFormatTraitTest extends TestCase
 
         self::assertSame(
             ['csv'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS),
         );
     }
 
@@ -38,7 +38,7 @@ final class ExportFieldFormatTraitTest extends TestCase
 
         self::assertSame(
             ['csv', 'json'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS),
         );
     }
 
@@ -49,7 +49,7 @@ final class ExportFieldFormatTraitTest extends TestCase
 
         self::assertSame(
             ['json'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::HIDDEN_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::HIDDEN_FORMATS),
         );
     }
 
@@ -60,7 +60,7 @@ final class ExportFieldFormatTraitTest extends TestCase
 
         self::assertSame(
             ['json', 'xlsx'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::HIDDEN_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::HIDDEN_FORMATS),
         );
     }
 
@@ -71,7 +71,7 @@ final class ExportFieldFormatTraitTest extends TestCase
 
         self::assertSame(
             ['xlsx'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::VISIBLE_FORMATS),
         );
     }
 
@@ -82,7 +82,7 @@ final class ExportFieldFormatTraitTest extends TestCase
 
         self::assertSame(
             ['csv' => 'Montant TTC'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS),
         );
     }
 
@@ -99,7 +99,7 @@ final class ExportFieldFormatTraitTest extends TestCase
                 'csv' => 'Montant TTC',
                 'json' => 'total_ttc',
             ],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS),
         );
     }
 
@@ -115,7 +115,7 @@ final class ExportFieldFormatTraitTest extends TestCase
                 'csv' => 'A',
                 'json' => 'B',
             ],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS),
         );
     }
 
@@ -128,7 +128,7 @@ final class ExportFieldFormatTraitTest extends TestCase
 
         self::assertSame(
             ['csv' => 'B'],
-            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS)
+            $field->getAsDto()->getCustomOption(ExportFieldOption::FORMAT_LABELS),
         );
     }
 

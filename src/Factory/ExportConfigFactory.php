@@ -9,9 +9,9 @@ use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
 use JorisDugue\EasyAdminExtraBundle\Enum\ExportActionDisplay;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
 use ReflectionClass;
 use ReflectionException;
-use RuntimeException;
 
 class ExportConfigFactory
 {
@@ -31,11 +31,11 @@ class ExportConfigFactory
         $attributes = $reflection->getAttributes(AdminExport::class);
 
         if ([] === $attributes) {
-            throw new RuntimeException(\sprintf('The CRUD controller "%s" must declare the #[AdminExport] attribute.', $controllerFqcn));
+            throw InvalidExportConfigurationException::missingAdminExportAttribute($controllerFqcn);
         }
 
         if (!is_subclass_of($controllerFqcn, ExportFieldsProviderInterface::class)) {
-            throw new RuntimeException(\sprintf('The CRUD controller "%s" must implement %s.', $controllerFqcn, ExportFieldsProviderInterface::class));
+            throw InvalidExportConfigurationException::missingExportFieldsProvider($controllerFqcn, ExportFieldsProviderInterface::class);
         }
 
         /** @var AdminExport $attribute */
@@ -59,6 +59,8 @@ class ExportConfigFactory
             previewEnabled: $attribute->previewEnabled,
             previewLimit: $attribute->previewLimit,
             previewLabel: $attribute->previewLabel,
+            batchExport: $attribute->batchExport,
+            batchExportLabel: $attribute->batchExportLabel,
         );
     }
 }

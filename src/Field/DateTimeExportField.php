@@ -17,8 +17,14 @@ final class DateTimeExportField implements ExportFieldInterface
     use ExportFieldRoleTrait;
     use ExportFieldTrait;
 
-    public const string OPTION_FORMAT = 'format';
-    private const string DEFAULT_FORMAT = 'Y-m-d H:i:s';
+    /**
+     * @var string
+     */
+    public const OPTION_FORMAT = 'format';
+    /**
+     * @var string
+     */
+    private const DEFAULT_FORMAT = 'Y-m-d H:i:s';
 
     public static function new(string $propertyName, ?string $label = null): static
     {

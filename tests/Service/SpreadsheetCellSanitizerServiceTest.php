@@ -45,7 +45,7 @@ final class SpreadsheetCellSanitizerServiceTest extends TestCase
     {
         self::assertSame(
             ["'=1+1", 'safe', '', "'@test"],
-            $this->service->sanitizeRow(['=1+1', 'safe', null, '@test'])
+            $this->service->sanitizeRow(['=1+1', 'safe', null, '@test']),
         );
     }
 }

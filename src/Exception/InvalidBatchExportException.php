@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace JorisDugue\EasyAdminExtraBundle\Exception;
+
+final class InvalidBatchExportException extends EasyAdminExtraException
+{
+    public static function emptySelection(): self
+    {
+        return new self('Batch export requires at least one selected entity ID.');
+    }
+
+    public static function compositeIdentifiersNotSupported(string $entityFqcn): self
+    {
+        return new self(\sprintf(
+            'Batch export is not supported for entity "%s": composite identifiers are not supported.',
+            $entityFqcn,
+        ));
+    }
+}

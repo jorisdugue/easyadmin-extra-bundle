@@ -18,24 +18,72 @@ final class MoneyExportField implements ExportFieldInterface
     use ExportFieldRoleTrait;
     use ExportFieldTrait;
 
-    public const string OPTION_SYMBOL = 'symbol';
-    public const string OPTION_SYMBOL_POSITION = 'symbol_position';
-    public const string OPTION_SYMBOL_SPACING = 'symbol_spacing';
-    public const string OPTION_DECIMALS = 'decimals';
-    public const string OPTION_DECIMAL_SEPARATOR = 'decimal_separator';
-    public const string OPTION_THOUSANDS_SEPARATOR = 'thousands_separator';
-    public const string OPTION_STORED_AS_CENTS = 'stored_as_cents';
+    /**
+     * @var string
+     */
+    public const OPTION_SYMBOL = 'symbol';
+    /**
+     * @var string
+     */
+    public const OPTION_SYMBOL_POSITION = 'symbol_position';
+    /**
+     * @var string
+     */
+    public const OPTION_SYMBOL_SPACING = 'symbol_spacing';
+    /**
+     * @var string
+     */
+    public const OPTION_DECIMALS = 'decimals';
+    /**
+     * @var string
+     */
+    public const OPTION_DECIMAL_SEPARATOR = 'decimal_separator';
+    /**
+     * @var string
+     */
+    public const OPTION_THOUSANDS_SEPARATOR = 'thousands_separator';
+    /**
+     * @var string
+     */
+    public const OPTION_STORED_AS_CENTS = 'stored_as_cents';
 
-    public const string SYMBOL_POSITION_PREFIX = 'prefix';
-    public const string SYMBOL_POSITION_SUFFIX = 'suffix';
+    /**
+     * @var string
+     */
+    public const SYMBOL_POSITION_PREFIX = 'prefix';
+    /**
+     * @var string
+     */
+    public const SYMBOL_POSITION_SUFFIX = 'suffix';
 
-    private const string DEFAULT_SYMBOL = '€';
-    private const string DEFAULT_SYMBOL_POSITION = self::SYMBOL_POSITION_SUFFIX;
-    private const bool DEFAULT_SYMBOL_SPACING = true;
-    private const int DEFAULT_DECIMALS = 2;
-    private const string DEFAULT_DECIMAL_SEPARATOR = ',';
-    private const string DEFAULT_THOUSANDS_SEPARATOR = ' ';
-    private const bool DEFAULT_STORED_AS_CENTS = false;
+    /**
+     * @var string
+     */
+    private const DEFAULT_SYMBOL = '€';
+    /**
+     * @var string
+     */
+    private const DEFAULT_SYMBOL_POSITION = self::SYMBOL_POSITION_SUFFIX;
+    /**
+     * @var bool
+     */
+    private const DEFAULT_SYMBOL_SPACING = true;
+    /**
+     * @var int
+     */
+    private const DEFAULT_DECIMALS = 2;
+    /**
+     * @var string
+     */
+    private const DEFAULT_DECIMAL_SEPARATOR = ',';
+    /**
+     * @var string
+     */
+    private const DEFAULT_THOUSANDS_SEPARATOR = ' ';
+    /**
+     * @var bool
+     */
+    private const DEFAULT_STORED_AS_CENTS = false;
 
     public static function new(string $propertyName, ?string $label = null): static
     {
@@ -126,7 +174,7 @@ final class MoneyExportField implements ExportFieldInterface
             spacing: true,
             decimals: 2,
             decimalSeparator: ',',
-            thousandsSeparator: ' '
+            thousandsSeparator: ' ',
         );
     }
 
@@ -141,7 +189,7 @@ final class MoneyExportField implements ExportFieldInterface
             spacing: false,
             decimals: 2,
             decimalSeparator: '.',
-            thousandsSeparator: ','
+            thousandsSeparator: ',',
         );
     }
 }

@@ -15,6 +15,7 @@ final class ExportFieldDto
     private ?Closure $transformer = null;
     private mixed $default = null;
     private ?int $position = null;
+    private bool $nullSafe = false;
 
     /**
      * @var array<string, mixed>
@@ -121,5 +122,15 @@ final class ExportFieldDto
     public function setCustomOptions(array $customOptions): void
     {
         $this->customOptions = $customOptions;
+    }
+
+    public function isNullSafe(): bool
+    {
+        return $this->nullSafe;
+    }
+
+    public function setNullSafe(bool $nullSafe): void
+    {
+        $this->nullSafe = $nullSafe;
     }
 }

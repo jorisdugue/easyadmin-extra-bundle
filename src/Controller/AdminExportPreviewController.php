@@ -62,13 +62,13 @@ final class AdminExportPreviewController extends AbstractController
         if (!$config->supportsFormat($format)) {
             throw $this->createNotFoundException(\sprintf('The export format "%s" is not enabled for preview.', $format));
         }
-
-        $crudAction = $request->attributes->get(EA::CRUD_ACTION);
+        $rawActionName = $request->query->get(EA::CRUD_ACTION);
+        $actionName = \is_string($rawActionName) ? $rawActionName : null;
         $context = $this->adminContextFactory->create(
             $request,
             $this->dashboardResolver->resolve($dashboardControllerFqcn),
             $this->controllerResolver->resolve($crudControllerFqcn),
-            $crudAction
+            $actionName,
         );
         $request->attributes->set(EA::CONTEXT_REQUEST_ATTRIBUTE, $context);
 
@@ -86,11 +86,11 @@ final class AdminExportPreviewController extends AbstractController
         foreach ($config->formats as $supportedFormat) {
             $previewUrls[$supportedFormat] = $this->router->generate(
                 \sprintf('%s_%s_export_preview', $dashboardRouteName, $crudRouteName),
-                [...$currentQuery, 'format' => $supportedFormat]
+                [...$currentQuery, 'format' => $supportedFormat],
             );
             $downloadUrls[$supportedFormat] = $this->router->generate(
                 \sprintf('%s_%s_export_%s', $dashboardRouteName, $crudRouteName, $supportedFormat),
-                $currentQuery
+                $currentQuery,
             );
         }
 

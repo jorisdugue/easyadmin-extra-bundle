@@ -53,7 +53,7 @@ final class ExportConfigFactoryTest extends TestCase
 }
 
 #[AdminExport(
-    formats: ['csv']
+    formats: ['csv'],
 )]
 final class DefaultDisplayCrudController extends AbstractCrudController implements ExportFieldsProviderInterface
 {

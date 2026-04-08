@@ -55,7 +55,7 @@ trait ExportFieldTrait
         $this->dto->setTransformer(
             $callback instanceof Closure
                 ? $callback
-                : Closure::fromCallable($callback)
+                : Closure::fromCallable($callback),
         );
 
         return $this;
@@ -111,6 +111,13 @@ trait ExportFieldTrait
         foreach ($options as $name => $value) {
             $this->dto->setCustomOption($name, $value);
         }
+
+        return $this;
+    }
+
+    public function nullSafe(bool $nullSafe = true): static
+    {
+        $this->dto->setNullSafe($nullSafe);
 
         return $this;
     }

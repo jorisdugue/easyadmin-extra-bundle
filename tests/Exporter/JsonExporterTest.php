@@ -40,7 +40,7 @@ final class JsonExporterTest extends TestCase
                 ['name' => 'Alice', 'email' => 'alice@example.com'],
                 ['name' => 'Bob', 'email' => 'bob@example.com'],
             ],
-            json_decode($content, true, 512, \JSON_THROW_ON_ERROR)
+            json_decode($content, true, 512, \JSON_THROW_ON_ERROR),
         );
     }
 
@@ -66,7 +66,7 @@ final class JsonExporterTest extends TestCase
 
         self::assertSame(
             [['name' => 'Alice', 'email' => null]],
-            json_decode($content, true, 512, \JSON_THROW_ON_ERROR)
+            json_decode($content, true, 512, \JSON_THROW_ON_ERROR),
         );
     }
 }

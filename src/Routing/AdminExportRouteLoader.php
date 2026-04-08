@@ -9,6 +9,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
+use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportBatchController;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
 use LogicException;
@@ -44,9 +45,14 @@ use Symfony\Component\Routing\RouteCollection;
  */
 final class AdminExportRouteLoader extends Loader
 {
-    public const string ROUTE_LOADER_TYPE = 'jorisdugue_easyadmin_extra.routes';
-
-    private const array ALLOWED_FORMATS = ['csv', 'xlsx', 'json'];
+    /**
+     * @var string
+     */
+    public const ROUTE_LOADER_TYPE = 'jorisdugue_easyadmin_extra.routes';
+    /**
+     * @var list<string>
+     */
+    private const ALLOWED_FORMATS = ['csv', 'xlsx', 'json'];
 
     private bool $isLoaded = false;
 
@@ -138,8 +144,40 @@ final class AdminExportRouteLoader extends Loader
                         [],
                         '',
                         [],
-                        ['GET']
+                        ['GET'],
                     ));
+
+                    if ($crud['batchExport']) {
+                        $batchPath = $this->joinPaths($dashboard['path'], $crud['path'], '/export/batch/' . $format);
+                        $batchRouteName = \sprintf('%s_%s_export_batch_%s', $dashboard['name'], $crud['name'], $format);
+
+                        $this->guardDuplicateRoute(
+                            $generatedRouteNames,
+                            $generatedRoutePaths,
+                            $batchRouteName,
+                            $batchPath,
+                            $dashboard['fqcn'],
+                            $crud['fqcn'],
+                        );
+
+                        $routes->add($batchRouteName, new Route(
+                            $batchPath,
+                            [
+                                '_controller' => AdminExportBatchController::class,
+                                '_jd_ea_extra_crud' => $crud['fqcn'],
+                                '_jd_ea_extra_dashboard' => $dashboard['fqcn'],
+                                '_jd_ea_extra_format' => $format,
+                                EA::CRUD_CONTROLLER_FQCN => $crud['fqcn'],
+                                EA::DASHBOARD_CONTROLLER_FQCN => $dashboard['fqcn'],
+                                EA::CRUD_ACTION => 'index',
+                            ],
+                            [],
+                            [],
+                            '',
+                            [],
+                            ['POST'],
+                        ));
+                    }
                 }
 
                 if (!$crud['previewEnabled']) {
@@ -217,7 +255,7 @@ final class AdminExportRouteLoader extends Loader
      * - AdminRoute(name, path)
      * - inferred from the CRUD controller class name
      *
-     * @return list<array{fqcn:string,name:string,path:string,formats:list<string>,previewEnabled:bool}>
+     * @return list<array{fqcn:string,name:string,path:string,formats:list<string>,previewEnabled:bool,batchExport:bool}>
      *
      * @throws InvalidArgumentException when no format is configured or when an unsupported format is found
      * @throws ReflectionException
@@ -245,6 +283,7 @@ final class AdminExportRouteLoader extends Loader
                 'name' => $this->exportRouteMetadataResolver->resolveRouteName($class, $config),
                 'formats' => $this->normalizeAndValidateFormats($config->formats, $class),
                 'previewEnabled' => $config->previewEnabled,
+                'batchExport' => $config->batchExport,
             ];
         }
 
@@ -260,7 +299,7 @@ final class AdminExportRouteLoader extends Loader
     {
         $existingDirs = array_values(array_filter(
             $this->discoveryPaths,
-            static fn (string $dir): bool => is_dir($dir)
+            static fn (string $dir): bool => is_dir($dir),
         ));
 
         if ([] === $existingDirs) {
@@ -334,7 +373,7 @@ final class AdminExportRouteLoader extends Loader
     {
         $normalizedFormats = array_values(array_unique(array_filter(
             array_map(static fn (string $f): string => strtolower(trim($f)), $formats),
-            static fn (string $f): bool => '' !== $f
+            static fn (string $f): bool => '' !== $f,
         )));
 
         if ([] === $normalizedFormats) {
@@ -343,7 +382,7 @@ final class AdminExportRouteLoader extends Loader
 
         $invalidFormats = array_values(array_filter(
             $normalizedFormats,
-            static fn (string $f): bool => !\in_array($f, self::ALLOWED_FORMATS, true)
+            static fn (string $f): bool => !\in_array($f, self::ALLOWED_FORMATS, true),
         ));
 
         if ([] !== $invalidFormats) {

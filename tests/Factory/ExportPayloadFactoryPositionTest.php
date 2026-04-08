@@ -34,7 +34,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
             new ExportFieldValueResolver(new PropertyValueReader()),
             new FilenameResolver(),
             new ExportFieldFormatResolver(),
-            new ExportCountResolver()
+            new ExportCountResolver(),
         );
     }
 
@@ -48,7 +48,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
                 TextExportField::new('phone', 'Phone'),
             ],
             formats: ['csv'],
-            maxRows: null
+            maxRows: null,
         );
 
         $context = new ExportContext(
@@ -56,7 +56,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
             scope: 'all',
             generatedAt: new DateTimeImmutable('2026-03-31 10:00:00'),
             user: null,
-            entityName: 'user'
+            entityName: 'user',
         );
 
         $entity = new class {
@@ -75,7 +75,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
         self::assertSame(['name', 'email', 'phone'], $payload->properties);
         self::assertSame(
             [['John', 'john@example.com', '0102030405']],
-            iterator_to_array($payload->rows, false)
+            iterator_to_array($payload->rows, false),
         );
     }
 
@@ -89,7 +89,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
                 TextExportField::new('phone', 'Phone'),
             ],
             formats: ['csv'],
-            maxRows: null
+            maxRows: null,
         );
 
         $context = new ExportContext(
@@ -97,7 +97,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
             scope: 'all',
             generatedAt: new DateTimeImmutable('2026-03-31 10:00:00'),
             user: null,
-            entityName: 'user'
+            entityName: 'user',
         );
 
         $entity = new class {
@@ -116,7 +116,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
         self::assertSame(['email', 'name', 'phone'], $payload->properties);
         self::assertSame(
             [['john@example.com', 'John', '0102030405']],
-            iterator_to_array($payload->rows, false)
+            iterator_to_array($payload->rows, false),
         );
     }
 
@@ -131,7 +131,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
                 TextExportField::new('city', 'City'),
             ],
             formats: ['csv'],
-            maxRows: null
+            maxRows: null,
         );
 
         $context = new ExportContext(
@@ -139,7 +139,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
             scope: 'all',
             generatedAt: new DateTimeImmutable('2026-03-31 10:00:00'),
             user: null,
-            entityName: 'user'
+            entityName: 'user',
         );
 
         $entity = new class {
@@ -159,7 +159,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
         self::assertSame(['name', 'email', 'phone', 'city'], $payload->properties);
         self::assertSame(
             [['John', 'john@example.com', '0102030405', 'Paris']],
-            iterator_to_array($payload->rows, false)
+            iterator_to_array($payload->rows, false),
         );
     }
 
@@ -173,7 +173,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
                 TextExportField::new('phone', 'Phone'),
             ],
             formats: ['csv'],
-            maxRows: null
+            maxRows: null,
         );
 
         $context = new ExportContext(
@@ -181,7 +181,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
             scope: 'all',
             generatedAt: new DateTimeImmutable('2026-03-31 10:00:00'),
             user: null,
-            entityName: 'user'
+            entityName: 'user',
         );
 
         $entity = new class {
@@ -209,7 +209,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
         self::assertSame(['name', 'email', 'phone'], $payload->properties);
         self::assertSame(
             [['John', 'john@example.com', '0102030405']],
-            iterator_to_array($payload->rows, false)
+            iterator_to_array($payload->rows, false),
         );
     }
 
@@ -225,7 +225,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
                 TextExportField::new('name', 'Name')->position(10),
             ],
             formats: ['csv'],
-            maxRows: null
+            maxRows: null,
         );
 
         $context = new ExportContext(
@@ -233,7 +233,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
             scope: 'all',
             generatedAt: new DateTimeImmutable('2026-03-31 10:00:00'),
             user: null,
-            entityName: 'user'
+            entityName: 'user',
         );
 
         $entity = new class {

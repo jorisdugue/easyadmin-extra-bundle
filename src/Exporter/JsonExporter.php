@@ -38,7 +38,7 @@ final readonly class JsonExporter
                     $object = $this->normalizeRow($payload->properties, $row);
                     $json = json_encode(
                         $object,
-                        \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR
+                        \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR,
                     );
 
                     if (!$first && false === fwrite($handle, ',')) {
@@ -70,9 +70,9 @@ final readonly class JsonExporter
             }
         }, Response::HTTP_OK, [
             'Content-Type' => 'application/json; charset=UTF-8',
-            'Content-Disposition' => new ResponseHeaderBag()->makeDisposition(
+            'Content-Disposition' => (new ResponseHeaderBag())->makeDisposition(
                 ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-                $filename
+                $filename,
             ),
         ]);
     }

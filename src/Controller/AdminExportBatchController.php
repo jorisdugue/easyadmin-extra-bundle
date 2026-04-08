@@ -13,12 +13,13 @@ use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\ExportManager;
+use JorisDugue\EasyAdminExtraBundle\Util\ValueStringifier;
 use ReflectionException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-final class AdminExportController extends AbstractController
+final class AdminExportBatchController extends AbstractController
 {
     public function __construct(
         private readonly ExportManager $exportManager,
@@ -28,8 +29,10 @@ final class AdminExportController extends AbstractController
     ) {}
 
     /**
-     * Builds a fresh EasyAdmin context for the targeted dashboard and CRUD controller,
-     * then delegates the export generation to the export manager.
+     * Handles a batch export POST request submitted by EasyAdmin's batch action form.
+     *
+     * EasyAdmin submits selected entity IDs as batchActionEntityIds[] in the POST body.
+     * This controller reads those IDs, builds a scoped query, and streams the export.
      *
      * @throws ReflectionException
      */
@@ -40,26 +43,36 @@ final class AdminExportController extends AbstractController
         $rawFormat = $request->attributes->get('_jd_ea_extra_format', '');
 
         if (!\is_string($rawCrudControllerFqcn) || '' === trim($rawCrudControllerFqcn)) {
-            throw $this->createNotFoundException('No CRUD controller was provided for export.');
+            throw $this->createNotFoundException('No CRUD controller was provided for batch export.');
         }
 
         if (!\is_string($rawDashboardControllerFqcn) || '' === trim($rawDashboardControllerFqcn)) {
-            throw $this->createNotFoundException('No dashboard controller was provided for export.');
+            throw $this->createNotFoundException('No dashboard controller was provided for batch export.');
         }
 
         if (!\is_string($rawFormat) || '' === trim($rawFormat)) {
-            throw new InvalidArgumentException('No export format was provided.');
+            throw new InvalidArgumentException('No export format was provided for batch export.');
         }
+
         /** @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
         $crudControllerFqcn = trim($rawCrudControllerFqcn);
         /** @var class-string<DashboardControllerInterface> $dashboardControllerFqcn */
         $dashboardControllerFqcn = trim($rawDashboardControllerFqcn);
         $format = ExportFormat::normalize($rawFormat);
 
+        $rawIds = $request->request->all('batchActionEntityIds');
+        $ids = array_values(array_filter(
+            array_map(static fn (mixed $id): string => trim(ValueStringifier::stringify($id)), $rawIds),
+            static fn (string $id): bool => '' !== $id,
+        ));
+
+        if ([] === $ids) {
+            throw new InvalidArgumentException('Batch export requires at least one selected entity ID.');
+        }
+
         $rawCrudAction = $request->attributes->get(EA::CRUD_ACTION);
         $crudAction = \is_string($rawCrudAction) && '' !== trim($rawCrudAction) ? trim($rawCrudAction) : null;
 
-        // Build a fresh EasyAdmin context for the targeted export request.
         $context = $this->adminContextFactory->create(
             $request,
             $this->dashboardResolver->resolve($dashboardControllerFqcn),
@@ -68,6 +81,6 @@ final class AdminExportController extends AbstractController
         );
         $request->attributes->set(EA::CONTEXT_REQUEST_ATTRIBUTE, $context);
 
-        return $this->exportManager->export($crudControllerFqcn, $format, $request);
+        return $this->exportManager->exportBatch($crudControllerFqcn, $format, $ids, $request);
     }
 }

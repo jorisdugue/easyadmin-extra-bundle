@@ -28,8 +28,14 @@ final class DateExportField implements ExportFieldInterface
     use ExportFieldRoleTrait;
     use ExportFieldTrait;
 
-    public const string OPTION_FORMAT = 'format';
-    private const string DEFAULT_FORMAT = 'Y-m-d';
+    /**
+     * @var string
+     */
+    public const OPTION_FORMAT = 'format';
+    /**
+     * @var string
+     */
+    private const DEFAULT_FORMAT = 'Y-m-d';
 
     public static function new(string $propertyName, ?string $label = null): static
     {

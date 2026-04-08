@@ -8,9 +8,18 @@ use InvalidArgumentException;
 
 final class ExportFormat
 {
-    public const string CSV = 'csv';
-    public const string XLSX = 'xlsx';
-    public const string JSON = 'json';
+    /**
+     * @var string
+     */
+    public const CSV = 'csv';
+    /**
+     * @var string
+     */
+    public const XLSX = 'xlsx';
+    /**
+     * @var string
+     */
+    public const JSON = 'json';
 
     /**
      * @return list<string>

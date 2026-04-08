@@ -12,3 +12,9 @@ parameters:
 
     inferPrivatePropertyTypeFromConstructor: true
     reportUnmatchedIgnoredErrors: true
+    treatPhpDocTypesAsCertain: false
+    checkExplicitMixed: true
+    checkDynamicProperties: false
+    universalObjectCratesClasses:
+        - Symfony\Component\HttpFoundation\ParameterBag
+        - Symfony\Component\HttpFoundation\InputBag

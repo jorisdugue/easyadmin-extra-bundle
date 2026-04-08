@@ -65,7 +65,7 @@ final readonly class XlsxExporter
             }
 
             try {
-                new Xlsx($spreadsheet)->save($tmpFile);
+                (new Xlsx($spreadsheet))->save($tmpFile);
             } catch (Throwable $e) {
                 if (is_file($tmpFile)) {
                     @unlink($tmpFile);
@@ -77,11 +77,11 @@ final readonly class XlsxExporter
             $response = new BinaryFileResponse($tmpFile);
             $response->setContentDisposition(
                 ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-                $payload->filename . '.xlsx'
+                $payload->filename . '.xlsx',
             );
             $response->headers->set(
                 'Content-Type',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             );
             $response->deleteFileAfterSend(true);
 
