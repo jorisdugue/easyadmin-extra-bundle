@@ -9,6 +9,9 @@ on:
       - dev
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   coding-standards:
     runs-on: ubuntu-latest
