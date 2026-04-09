@@ -23,6 +23,7 @@ final readonly class AdminExport
         public string $csvLabel = 'Export CSV',
         public string $xlsxLabel = 'Export Excel',
         public string $jsonLabel = 'Export JSON',
+        public string $xmlLabel = 'Export XML',
         /**
          * Whether spreadsheet formulas should be allowed in exported files.
          *

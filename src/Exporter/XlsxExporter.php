@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Exporter;
 
+use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
+use JorisDugue\EasyAdminExtraBundle\Contract\ExporterInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -26,7 +28,7 @@ use Throwable;
  * - When formulas are disabled, row values are also written as explicit strings
  * - When formulas are enabled, values are written as-is and may be interpreted as formulas
  */
-final readonly class XlsxExporter
+final readonly class XlsxExporter implements ExporterInterface
 {
     /**
      * Exports data as an XLSX file download.
@@ -90,5 +92,10 @@ final readonly class XlsxExporter
             $spreadsheet->disconnectWorksheets();
             unset($spreadsheet);
         }
+    }
+
+    public function getFormat(): string
+    {
+        return ExportFormat::XLSX;
     }
 }

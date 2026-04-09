@@ -6,14 +6,10 @@ namespace JorisDugue\EasyAdminExtraBundle\Service\Export;
 
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
-use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPreview;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
-use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
-use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
-use JorisDugue\EasyAdminExtraBundle\Exporter\XlsxExporter;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
@@ -36,9 +32,7 @@ final readonly class ExportManager
         private ExportPayloadFactory $exportPayloadFactory,
         private EntityQueryBuilderFactory $entityQueryBuilderFactory,
         private ExportPreviewInspector $exportPreviewInspector,
-        private JsonExporter $jsonExporter,
-        private CsvExporter $csvExporter,
-        private XlsxExporter $xlsxExporter,
+        private ExporterRegistry $exporterRegistry,
         private AuthorizationCheckerInterface $authorizationChecker,
     ) {}
 
@@ -221,11 +215,6 @@ final readonly class ExportManager
 
     private function createExportResponse(string $format, ExportPayload $payload): Response
     {
-        return match ($format) {
-            ExportFormat::CSV => $this->csvExporter->export($payload),
-            ExportFormat::XLSX => $this->xlsxExporter->export($payload),
-            ExportFormat::JSON => $this->jsonExporter->export($payload),
-            default => throw InvalidExportConfigurationException::unsupportedFormat($format, [ExportFormat::CSV, ExportFormat::XLSX, ExportFormat::JSON]),
-        };
+        return $this->exporterRegistry->export($format, $payload);
     }
 }

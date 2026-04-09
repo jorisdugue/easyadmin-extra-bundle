@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Exporter;
 
+use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
+use JorisDugue\EasyAdminExtraBundle\Contract\ExporterInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
 use JsonException;
 use RuntimeException;
@@ -11,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-final readonly class JsonExporter
+final readonly class JsonExporter implements ExporterInterface
 {
     public function export(ExportPayload $payload): StreamedResponse
     {
@@ -93,5 +95,10 @@ final readonly class JsonExporter
         }
 
         return $normalized;
+    }
+
+    public function getFormat(): string
+    {
+        return ExportFormat::JSON;
     }
 }
