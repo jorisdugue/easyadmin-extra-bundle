@@ -36,7 +36,7 @@ final readonly class ExporterRegistry
             $format = $exporter->getFormat();
 
             if (isset($map[$format])) {
-                throw new LogicException(\sprintf('Duplicate exporter detected for format "%s".', $format));
+                throw new LogicException(\sprintf('Duplicate exporter detected for format "%s". Conflicting exporters: "%s" and "%s".', $format, get_debug_type($map[$format]), get_debug_type($exporter)));
             }
 
             $map[$format] = $exporter;

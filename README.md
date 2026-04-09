@@ -7,20 +7,20 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Packagist Version](https://img.shields.io/packagist/v/jorisdugue/easyadmin-extra-bundle)
 
-Export and data safety tools for EasyAdmin 5 (Symfony 7.4+, PHP 8.2+, PHP 8.5 ready)
+Export and data safety tools for EasyAdmin 5 (Symfony 7.4/8, PHP 8.2+, PHP 8.5 ready)
 
 ---
 
 ## 🧠 Overview
 
-EasyAdmin Extra Bundle extends EasyAdmin with **advanced export capabilities and data control tools**, while staying fully aligned with its ecosystem.
-
+EasyAdmin Extra Bundle extends EasyAdmin with **advanced export capabilities and data control tools**, while staying aligned with EasyAdmin conventions and keeping behavior explicit.
 It provides:
 
-* 📤 Structured data exports (CSV, XLSX, JSON)
+* 📤 Structured data exports (CSV, XLSX, JSON, XML)
 * 🔒 Strong security defaults (GDPR-friendly)
 * 🧩 Independent export field system
 * ⚙️ High performance (streaming, large datasets)
+* 👀 Optional preview flow before download
 * 📦 Batch export for selected rows directly from EasyAdmin
 
 ---
@@ -54,6 +54,7 @@ EasyAdmin is great for CRUD operations, but real-world backoffices often need mo
 * handling large datasets efficiently
 
 👉 This bundle focuses on **data control, safety, and developer ergonomics**.
+It is designed to be **non-intrusive**: opt-in with `#[AdminExport]`, explicit behavior, no hidden magic.
 
 ---
 
@@ -64,7 +65,9 @@ EasyAdmin is great for CRUD operations, but real-world backoffices often need mo
 * CSV (streamed, memory efficient)
 * XLSX (spreadsheet export)
 * JSON export
+* XML export
 * Full export or filtered export (EasyAdmin context-aware)
+* Optional export preview per format
 * Batch export for selected rows
 * Custom filename support
 * Configurable max rows
@@ -173,8 +176,10 @@ use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
 
 #[AdminExport(
     filename: 'users_export',
-    formats: ['csv', 'xlsx', 'json'],
+    formats: ['csv', 'xlsx', 'json', 'xml'],
     maxRows: 10000,
+    previewEnabled: true,
+    previewLimit: 30,
     batchExport: true,
 )]
 class UserCrudController extends AbstractCrudController
@@ -319,6 +324,23 @@ class UserCrudController extends AbstractCrudController
 
 👉 This automatically adds batch export actions in EasyAdmin for supported formats.
 
+### Preview flow
+
+You can enable an export preview page before download:
+
+```php
+#[AdminExport(
+    formats: ['csv', 'xml'],
+    previewEnabled: true,
+    previewLimit: 20,
+)]
+class UserCrudController extends AbstractCrudController
+{
+}
+```
+
+Preview uses the same export configuration (field visibility, masking, labels, formats), so what users validate is aligned with actual export output.
+
 ### How batch export works
 
 * select rows in the EasyAdmin list view
@@ -387,7 +409,7 @@ Export Engine
     ↓
 Export Fields (custom schema)
     ↓
-Output (CSV / XLSX / JSON)
+Output (CSV / XLSX / JSON / XML)
 ```
 
 ---
@@ -399,6 +421,7 @@ Output (CSV / XLSX / JSON)
 | CSV    | Streamed, best for large datasets |
 | XLSX   | Spreadsheet export                |
 | JSON   | Structured data                   |
+| XML    | Structured, interoperable markup  |
 
 ---
 
@@ -472,6 +495,8 @@ This ensures:
 | CSV streaming                | ❌                | ✅           |
 | XLSX export                  | ❌                | ✅           |
 | JSON export                  | ❌                | ✅           |
+| XML export                   | ❌                | ✅           |
+| Preview before export        | ❌                | ✅           |
 | Data masking                 | ❌                | ✅           |
 | Formula protection           | ❌                | ✅           |
 | Custom export schema         | ❌                | ✅           |
@@ -483,6 +508,7 @@ This ensures:
 
 * Stay close to EasyAdmin conventions
 * Avoid magic and hidden behaviors
+* Keep behavior explicit and opt-in
 * Provide safe defaults
 * Focus on real-world backoffice needs
 

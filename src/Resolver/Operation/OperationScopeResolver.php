@@ -23,7 +23,7 @@ final readonly class OperationScopeResolver
         $forcedMode = trim($request->query->getString('mode'));
 
         if ('' !== $forcedMode && !\in_array($forcedMode, [self::SCOPE_ALL, self::SCOPE_CONTEXT], true)) {
-            throw new InvalidArgumentException(\sprintf('Invalid export mode "%s". Allowed modes are: %s, %s.', $forcedMode, self::SCOPE_ALL, self::SCOPE_CONTEXT));
+            throw new InvalidArgumentException(\sprintf('Invalid export mode "%s" provided in query parameter "mode". Allowed values are "%s" and "%s".', $forcedMode, self::SCOPE_ALL, self::SCOPE_CONTEXT));
         }
 
         if (self::SCOPE_ALL === $forcedMode) {
