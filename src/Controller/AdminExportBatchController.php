@@ -12,7 +12,7 @@ use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
-use JorisDugue\EasyAdminExtraBundle\Service\ExportManager;
+use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
 use JorisDugue\EasyAdminExtraBundle\Util\ValueStringifier;
 use ReflectionException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;

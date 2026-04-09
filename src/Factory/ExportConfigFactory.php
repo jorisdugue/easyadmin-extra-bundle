@@ -52,6 +52,7 @@ class ExportConfigFactory
             csvLabel: $attribute->csvLabel,
             xlsxLabel: $attribute->xlsxLabel,
             jsonLabel: $attribute->jsonLabel,
+            xmlLabel: $attribute->xmlLabel,
             allowSpreadsheetFormulas: $attribute->allowSpreadsheetFormulas,
             routeName: $attribute->routeName,
             routePath: $attribute->routePath,

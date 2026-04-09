@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Exporter;
 
+use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
+use JorisDugue\EasyAdminExtraBundle\Contract\ExporterInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
 use JorisDugue\EasyAdminExtraBundle\Service\SpreadsheetCellSanitizerService;
 use RuntimeException;
@@ -26,7 +28,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * - Uses php://output for direct streaming
  * - Optional periodic flushing to reduce output buffering
  */
-final readonly class CsvExporter
+final readonly class CsvExporter implements ExporterInterface
 {
     public function __construct(
         private SpreadsheetCellSanitizerService $sanitizerService,
@@ -102,5 +104,10 @@ final readonly class CsvExporter
         $response->headers->set('Content-Disposition', $disposition);
 
         return $response;
+    }
+
+    public function getFormat(): string
+    {
+        return ExportFormat::CSV;
     }
 }

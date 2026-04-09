@@ -25,6 +25,7 @@ final readonly class ExportConfig
         public string $csvLabel = 'Export CSV',
         public string $xlsxLabel = 'Export Excel',
         public string $jsonLabel = 'Export JSON',
+        public string $xmlLabel = 'Export XML',
         public bool $allowSpreadsheetFormulas = false,
         public ?string $routeName = null,
         public ?string $routePath = null,
@@ -68,6 +69,7 @@ final readonly class ExportConfig
             ExportFormat::CSV => $this->csvLabel,
             ExportFormat::JSON => $this->jsonLabel,
             ExportFormat::XLSX => $this->xlsxLabel,
+            ExportFormat::XML => $this->xmlLabel,
             default => throw new InvalidArgumentException(\sprintf('Unsupported export format "%s".', $format)),
         };
     }

@@ -12,19 +12,27 @@ use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ExportActionExtension;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\XlsxExporter;
+use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
-use JorisDugue\EasyAdminExtraBundle\Resolver\BatchIdsQueryBuilderResolver;
+use JorisDugue\EasyAdminExtraBundle\Factory\Operation\EntityQueryBuilderFactory;
+use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportPreviewInspector;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportCountResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntityMetadataResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntitySelectionResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationContextResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationScopeResolver;
 use JorisDugue\EasyAdminExtraBundle\Routing\AdminExportRouteLoader;
-use JorisDugue\EasyAdminExtraBundle\Service\ExportManager;
+use JorisDugue\EasyAdminExtraBundle\Service\Export\ExporterRegistry;
+use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
 use JorisDugue\EasyAdminExtraBundle\Service\SpreadsheetCellSanitizerService;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
@@ -46,19 +54,37 @@ return static function (ContainerConfigurator $container): void {
     $services->set(FilenameResolver::class);
     $services->set(ExportPayloadFactory::class);
     $services->set(ExportFieldFormatResolver::class);
-    $services->set(CsvExporter::class);
-    $services->set(JsonExporter::class);
-    $services->set(XlsxExporter::class);
+    $services->set(CsvExporter::class)
+        ->tag('joris_dugue_easyadmin_extra.exporter');
+
+    $services->set(JsonExporter::class)
+        ->tag('joris_dugue_easyadmin_extra.exporter');
+
+    $services->set(XlsxExporter::class)
+        ->tag('joris_dugue_easyadmin_extra.exporter');
+
+    $services->set(ExporterRegistry::class)
+        ->arg('$exporters', tagged_iterator('joris_dugue_easyadmin_extra.exporter'));
+
     $services->set(CollectionFactoryCompat::class);
     $services->set(ExportManager::class);
     $services->set(ExportFieldValueResolver::class);
     $services->set(ExportRequestResolver::class);
-    $services->set(BatchIdsQueryBuilderResolver::class);
+    $services->set(ExportContextFactory::class);
+    $services->set(EntityQueryBuilderFactory::class);
+    $services->set(ExportPreviewInspector::class);
+    $services->set(OperationScopeResolver::class);
+    $services->set(EntityMetadataResolver::class);
+    $services->set(OperationContextFactory::class);
+    $services->set(OperationContextResolver::class);
+    $services->set(EntitySelectionResolver::class);
     $services->set(SpreadsheetCellSanitizerService::class);
     $services->set(ExportRouteMetadataResolver::class);
+
     $services->set(AdminExportController::class)
         ->public()
         ->tag('controller.service_arguments');
+
     $services->set(AdminExportPreviewController::class)
         ->public()
         ->tag('controller.service_arguments');

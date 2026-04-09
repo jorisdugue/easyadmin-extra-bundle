@@ -21,6 +21,8 @@ final class ExportFormat
      */
     public const JSON = 'json';
 
+    public const XML = 'xml';
+
     /**
      * @return list<string>
      */
@@ -30,14 +32,17 @@ final class ExportFormat
             self::CSV,
             self::XLSX,
             self::JSON,
+            self::XML,
         ];
     }
 
     public static function isSupported(string $format): bool
     {
-        $format = self::normalizeRaw($format);
-
-        return \in_array($format, self::all(), true);
+        try {
+            return \in_array(self::normalizeRaw($format), self::all(), true);
+        } catch (InvalidArgumentException) {
+            return false;
+        }
     }
 
     public static function normalize(string $format): string
@@ -61,10 +66,14 @@ final class ExportFormat
         $normalized = [];
 
         foreach ($formats as $format) {
-            $normalized[] = self::normalize($format);
+            $candidate = self::normalize($format);
+
+            if (!\in_array($candidate, $normalized, true)) {
+                $normalized[] = $candidate;
+            }
         }
 
-        return array_values(array_unique($normalized));
+        return $normalized;
     }
 
     private static function normalizeRaw(string $format): string
