@@ -62,10 +62,10 @@
     "phpunit/phpunit": "^11.0"
   },
   "scripts": {
-    "test": "vendor/bin/phpunit",
-    "cs:check": "vendor/bin/php-cs-fixer fix --dry-run --diff --verbose",
-    "cs:fix": "vendor/bin/php-cs-fixer fix --verbose",
-    "phpstan": "phpstan analyse --memory-limit 1024M"
+    "test": "@php vendor/bin/phpunit",
+    "cs:check": "@php vendor/bin/php-cs-fixer fix --dry-run --diff --verbose",
+    "cs:fix": "@php vendor/bin/php-cs-fixer fix --verbose",
+    "phpstan": "@php phpstan analyse --memory-limit 1024M"
   },
   "config": {
     "sort-packages": true,

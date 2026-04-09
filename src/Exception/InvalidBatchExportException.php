@@ -18,4 +18,9 @@ final class InvalidBatchExportException extends EasyAdminExtraException
             $entityFqcn,
         ));
     }
+
+    public static function missingRootAlias(): self
+    {
+        return new self('Unable to resolve the root alias for the batch export query builder.');
+    }
 }
