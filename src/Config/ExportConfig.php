@@ -12,6 +12,7 @@ final readonly class ExportConfig
 {
     /**
      * @param list<ExportFieldInterface> $fields
+     * @param list<string> $requiredRoles
      * @param list<string> $formats
      */
     public function __construct(
@@ -22,6 +23,7 @@ final readonly class ExportConfig
         public bool $filteredExport = true,
         public ?int $maxRows = 50000,
         public ?string $requiredRole = null,
+        public array $requiredRoles = [],
         public string $csvLabel = 'Export CSV',
         public string $xlsxLabel = 'Export Excel',
         public string $jsonLabel = 'Export JSON',

@@ -52,7 +52,7 @@ final class AdminExportRouteLoader extends Loader
     /**
      * @var list<string>
      */
-    private const ALLOWED_FORMATS = ['csv', 'xlsx', 'json'];
+    private const ALLOWED_FORMATS = ['csv', 'xlsx', 'json', 'xml'];
 
     private bool $isLoaded = false;
 

@@ -69,7 +69,7 @@ final class AdminExportRouteLoaderTest extends TestCase
 
     public function testLoadRejectsUnsupportedFormats(): void
     {
-        [$projectDir, $namespace] = $this->createProjectWithControllers('invalid_format', ['xml']);
+        [$projectDir, $namespace] = $this->createProjectWithControllers('invalid_format', ['coffee']);
 
         require_once $projectDir . '/src/Controller/AdminDashboardController.php';
         require_once $projectDir . '/src/Controller/ProductCrudController.php';
@@ -81,7 +81,7 @@ final class AdminExportRouteLoaderTest extends TestCase
         );
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid export format(s) [xml]');
+        $this->expectExceptionMessage('Invalid export format(s) [coffee]');
 
         $loader->load(null, AdminExportRouteLoader::ROUTE_LOADER_TYPE);
     }
@@ -142,7 +142,7 @@ final class AdminExportRouteLoaderTest extends TestCase
                     return ProductEntity::class;
                 }
 
-                public static function getExportFields(): array
+                public static function getExportFields(?string \$exportSet = null): array
                 {
                     return [TextExportField::new('name', 'Name')];
                 }
@@ -201,7 +201,7 @@ final class AdminExportRouteLoaderTest extends TestCase
                     return ProductEntity::class;
                 }
 
-                public static function getExportFields(): array
+                public static function getExportFields(?string \$exportSet = null): array
                 {
                     return [TextExportField::new('name', 'Name')];
                 }

@@ -12,6 +12,7 @@ final readonly class AdminExport
 {
     /**
      * @param list<string> $formats
+     * @param list<string> $requiredRoles
      */
     public function __construct(
         public string $filename = 'export_{date}_{time}',
@@ -20,6 +21,7 @@ final readonly class AdminExport
         public bool $filteredExport = true,
         public ?int $maxRows = 50000,
         public ?string $requiredRole = null,
+        public array $requiredRoles = [],
         public string $csvLabel = 'Export CSV',
         public string $xlsxLabel = 'Export Excel',
         public string $jsonLabel = 'Export JSON',

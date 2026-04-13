@@ -62,7 +62,7 @@ final class DefaultDisplayCrudController extends AbstractCrudController implemen
         return stdClass::class;
     }
 
-    public static function getExportFields(): array
+    public static function getExportFields(?string $exportSet = null): array
     {
         return [];
     }
@@ -79,7 +79,7 @@ final class ButtonsDisplayCrudController extends AbstractCrudController implemen
         return stdClass::class;
     }
 
-    public static function getExportFields(): array
+    public static function getExportFields(?string $exportSet = null): array
     {
         return [];
     }

@@ -27,6 +27,7 @@ use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Field\TextExportField;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportPreviewInspector;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
@@ -196,6 +197,7 @@ final class ExportManagerTest extends TestCase
             new ExportPreviewInspector(),
             new ExporterRegistry([$exporter]),
             $authorizationChecker,
+            new ExportSetMetadataResolver(),
         );
     }
 
@@ -232,7 +234,7 @@ final class ExportManagerCrudController extends AbstractCrudController implement
         return ExportManagerEntity::class;
     }
 
-    public static function getExportFields(): array
+    public static function getExportFields(?string $exportSet = null): array
     {
         return [TextExportField::new('name', 'Name')];
     }
