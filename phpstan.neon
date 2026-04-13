@@ -18,3 +18,5 @@ parameters:
     universalObjectCratesClasses:
         - Symfony\Component\HttpFoundation\ParameterBag
         - Symfony\Component\HttpFoundation\InputBag
+    ignoreErrors:
+        - '#getContainerExtension\(\) never returns null#'

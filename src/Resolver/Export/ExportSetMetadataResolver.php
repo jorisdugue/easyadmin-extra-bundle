@@ -26,45 +26,31 @@ final class ExportSetMetadataResolver
         $metadata = $crudControllerFqcn::getExportSetMetadata();
 
         if ([] === $metadata) {
-            throw new InvalidExportConfigurationException(sprintf(
-                'The CRUD controller "%s" must declare at least one export set metadata entry.',
-                $crudControllerFqcn,
-            ));
+            throw new InvalidExportConfigurationException(\sprintf('The CRUD controller "%s" must declare at least one export set metadata entry.', $crudControllerFqcn));
         }
 
         $resolved = [];
 
         foreach ($metadata as $item) {
             if (!$item instanceof ExportSetMetadata) {
-                throw new InvalidExportConfigurationException(sprintf(
-                    'The CRUD controller "%s" must only return "%s" instances from getExportSetMetadata().',
-                    $crudControllerFqcn,
-                    ExportSetMetadata::class,
-                ));
+                throw new InvalidExportConfigurationException(\sprintf('The CRUD controller "%s" must only return "%s" instances from getExportSetMetadata().', $crudControllerFqcn, ExportSetMetadata::class));
             }
 
             $name = $this->normalizeName($item->getName());
 
             if (isset($resolved[$name])) {
-                throw new InvalidExportConfigurationException(sprintf(
-                    'The CRUD controller "%s" declares the export set "%s" more than once.',
-                    $crudControllerFqcn,
-                    $name,
-                ));
+                throw new InvalidExportConfigurationException(\sprintf('The CRUD controller "%s" declares the export set "%s" more than once.', $crudControllerFqcn, $name));
             }
 
             $resolved[$name] = new ExportSetMetadata(
                 $name,
                 $this->resolveLabel($item, $name),
-                $this->normalizeRoles($item->getRequiredRoles())
+                $this->normalizeRoles($item->getRequiredRoles()),
             );
         }
 
         if (!isset($resolved['default'])) {
-            throw new InvalidExportConfigurationException(sprintf(
-                'The CRUD controller "%s" must declare a "default" export set metadata entry.',
-                $crudControllerFqcn,
-            ));
+            throw new InvalidExportConfigurationException(\sprintf('The CRUD controller "%s" must declare a "default" export set metadata entry.', $crudControllerFqcn));
         }
 
         return array_values($resolved);
@@ -88,17 +74,12 @@ final class ExportSetMetadataResolver
             $this->resolveForCrud($crudControllerFqcn),
         );
 
-        throw new InvalidExportConfigurationException(sprintf(
-            'Unknown export set "%s" for CRUD controller "%s". Available sets: %s.',
-            $resolvedSet,
-            $crudControllerFqcn,
-            implode(', ', $availableSets),
-        ));
+        throw new InvalidExportConfigurationException(\sprintf('Unknown export set "%s" for CRUD controller "%s". Available sets: %s.', $resolvedSet, $crudControllerFqcn, implode(', ', $availableSets)));
     }
 
     public function normalizeRequestedSet(mixed $requestedSet): ?string
     {
-        if (!is_string($requestedSet)) {
+        if (!\is_string($requestedSet)) {
             return null;
         }
 
@@ -120,10 +101,7 @@ final class ExportSetMetadataResolver
         }
 
         if (!preg_match('/^[a-z0-9_-]+$/', $name)) {
-            throw new InvalidExportConfigurationException(sprintf(
-                'Invalid export set name "%s". Allowed characters are: a-z, 0-9, "_" and "-".',
-                $name,
-            ));
+            throw new InvalidExportConfigurationException(\sprintf('Invalid export set name "%s". Allowed characters are: a-z, 0-9, "_" and "-".', $name));
         }
 
         return $name;
@@ -164,7 +142,7 @@ final class ExportSetMetadataResolver
                 continue;
             }
 
-            if (!in_array($role, $resolved, true)) {
+            if (!\in_array($role, $resolved, true)) {
                 $resolved[] = $role;
             }
         }

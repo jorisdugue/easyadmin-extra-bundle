@@ -197,7 +197,7 @@ final class ExportManagerTest extends TestCase
             new ExportPreviewInspector(),
             new ExporterRegistry([$exporter]),
             $authorizationChecker,
-            new ExportSetMetadataResolver()
+            new ExportSetMetadataResolver(),
         );
     }
 

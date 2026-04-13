@@ -16,9 +16,9 @@ use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportSetMetadata;
 use JorisDugue\EasyAdminExtraBundle\Enum\ExportActionDisplay;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
-use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use ReflectionException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\RouterInterface;
@@ -164,7 +164,7 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
                     continue;
                 }
 
-                $routeName = sprintf('%s_%s_export_batch_%s', $dashboardRouteName, $crudRouteName, $format);
+                $routeName = \sprintf('%s_%s_export_batch_%s', $dashboardRouteName, $crudRouteName, $format);
                 $parameters = $this->buildExportSetParameters($exportSet);
                 $label = $this->buildSetAwareLabel(
                     baseLabel: $config->batchExportLabel,
@@ -219,7 +219,7 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
 
                 $actions[] = Action::new($definition['action'] . '_' . $exportSet->getName(), $label)
                     ->linkToUrl(fn () => $this->router->generate(
-                        sprintf('%s_%s_export_%s', $dashboardRouteName, $crudRouteName, $format),
+                        \sprintf('%s_%s_export_%s', $dashboardRouteName, $crudRouteName, $format),
                         $parameters,
                     ))
                     ->createAsGlobalAction();
@@ -254,12 +254,12 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         foreach ($exportSets as $exportSet) {
             $parameters = [...$currentQuery, ...$this->buildExportSetParameters($exportSet), 'format' => $config->getDefaultFormat()];
             $label = $multipleSets
-                ? sprintf('%s (%s)', $config->previewLabel, $exportSet->getLabel())
+                ? \sprintf('%s (%s)', $config->previewLabel, $exportSet->getLabel())
                 : $config->previewLabel;
 
             $actions[] = Action::new('jdExportPreview_' . $exportSet->getName(), $label)
                 ->linkToUrl(fn (): string => $this->router->generate(
-                    sprintf('%s_%s_export_preview', $dashboardRouteName, $crudRouteName),
+                    \sprintf('%s_%s_export_preview', $dashboardRouteName, $crudRouteName),
                     $parameters,
                 ))
                 ->createAsGlobalAction();
@@ -356,14 +356,14 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
 
     private function buildSetAwareLabel(string $baseLabel, string $format, int $formatCount, ExportSetMetadata $exportSet, bool $multipleSets): string
     {
-        $label = $multipleSets ? sprintf('%s (%s)', $exportSet->getLabel(), strtoupper($format)) : $baseLabel;
+        $label = $multipleSets ? \sprintf('%s (%s)', $exportSet->getLabel(), strtoupper($format)) : $baseLabel;
 
         if ($multipleSets) {
             return $label;
         }
 
         if ($formatCount > 1 && !str_contains($baseLabel, strtoupper($format))) {
-            return sprintf('%s (%s)', $baseLabel, strtoupper($format));
+            return \sprintf('%s (%s)', $baseLabel, strtoupper($format));
         }
 
         return $baseLabel;

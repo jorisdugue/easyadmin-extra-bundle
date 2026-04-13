@@ -194,20 +194,13 @@ final readonly class ExportManager
     private function assertGranted(ExportConfig $config, ExportSetMetadata $setMetadata): void
     {
         if ([] !== $config->requiredRoles && !$this->isGrantedForAnyRole($config->requiredRoles)) {
-            throw new AccessDeniedException(\sprintf(
-                'One of the following roles is required to export this resource: %s.',
-                implode(', ', $config->requiredRoles),
-            ));
+            throw new AccessDeniedException(\sprintf('One of the following roles is required to export this resource: %s.', implode(', ', $config->requiredRoles)));
         }
 
         $requiredRoles = $setMetadata->getRequiredRoles();
 
         if ([] !== $requiredRoles && !$this->isGrantedForAnyRole($requiredRoles)) {
-            throw new AccessDeniedException(\sprintf(
-                'One of the following roles is required to access the "%s" export set: %s.',
-                $setMetadata->getName(),
-                implode(', ', $requiredRoles),
-            ));
+            throw new AccessDeniedException(\sprintf('One of the following roles is required to access the "%s" export set: %s.', $setMetadata->getName(), implode(', ', $requiredRoles)));
         }
     }
 
