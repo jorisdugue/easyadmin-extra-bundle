@@ -10,6 +10,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Factory\AdminContextFactory;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
+use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
@@ -23,6 +24,7 @@ final class AdminExportController extends AbstractController
     public function __construct(
         private readonly ExportManager $exportManager,
         private readonly AdminContextFactory $adminContextFactory,
+        private readonly CrudActionNameResolver $crudActionNameResolver,
         private readonly CrudControllerResolver $controllerResolver,
         private readonly DashboardResolver $dashboardResolver,
     ) {}
@@ -56,15 +58,12 @@ final class AdminExportController extends AbstractController
         $dashboardControllerFqcn = trim($rawDashboardControllerFqcn);
         $format = ExportFormat::normalize($rawFormat);
 
-        $rawCrudAction = $request->attributes->get(EA::CRUD_ACTION);
-        $crudAction = \is_string($rawCrudAction) && '' !== trim($rawCrudAction) ? trim($rawCrudAction) : null;
-
         // Build a fresh EasyAdmin context for the targeted export request.
         $context = $this->adminContextFactory->create(
             $request,
             $this->dashboardResolver->resolve($dashboardControllerFqcn),
             $this->controllerResolver->resolve($crudControllerFqcn),
-            $crudAction,
+            $this->crudActionNameResolver->resolve($request),
         );
         $request->attributes->set(EA::CONTEXT_REQUEST_ATTRIBUTE, $context);
 

@@ -18,6 +18,7 @@ use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\EntityQueryBuilderFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationContextFactory;
+use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportPreviewInspector;
@@ -52,6 +53,7 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$container', service('service_container'));
     $services->set(DashboardResolver::class)
         ->arg('$container', service('service_container'));
+    $services->set(CrudActionNameResolver::class);
     $services->set(AdminExportBatchController::class)
         ->public()
         ->tag('controller.service_arguments');

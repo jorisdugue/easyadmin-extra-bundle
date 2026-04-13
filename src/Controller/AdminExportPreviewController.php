@@ -10,6 +10,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Factory\AdminContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
+use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
@@ -24,6 +25,7 @@ final class AdminExportPreviewController extends AbstractController
 {
     public function __construct(
         private readonly AdminContextFactory $adminContextFactory,
+        private readonly CrudActionNameResolver $crudActionNameResolver,
         private readonly CrudControllerResolver $controllerResolver,
         private readonly DashboardResolver $dashboardResolver,
         private readonly ExportConfigFactory $exportConfigFactory,
@@ -62,13 +64,11 @@ final class AdminExportPreviewController extends AbstractController
         if (!$config->supportsFormat($format)) {
             throw $this->createNotFoundException(\sprintf('The export format "%s" is not enabled for preview.', $format));
         }
-        $rawActionName = $request->query->get(EA::CRUD_ACTION);
-        $actionName = \is_string($rawActionName) ? $rawActionName : null;
         $context = $this->adminContextFactory->create(
             $request,
             $this->dashboardResolver->resolve($dashboardControllerFqcn),
             $this->controllerResolver->resolve($crudControllerFqcn),
-            $actionName,
+            $this->crudActionNameResolver->resolve($request),
         );
         $request->attributes->set(EA::CONTEXT_REQUEST_ATTRIBUTE, $context);
 
