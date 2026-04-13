@@ -9,5 +9,5 @@ interface ExportFieldsProviderInterface
     /**
      * @return list<ExportFieldInterface>
      */
-    public static function getExportFields(): array;
+    public static function getExportFields(?string $exportSet = null): array;
 }

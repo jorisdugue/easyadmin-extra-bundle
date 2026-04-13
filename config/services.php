@@ -12,6 +12,7 @@ use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ExportActionExtension;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\XlsxExporter;
+use JorisDugue\EasyAdminExtraBundle\Exporter\XmlExporter;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
@@ -25,6 +26,7 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntityMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntitySelectionResolver;
@@ -50,7 +52,9 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$container', service('service_container'));
     $services->set(DashboardResolver::class)
         ->arg('$container', service('service_container'));
-    $services->set(AdminExportBatchController::class);
+    $services->set(AdminExportBatchController::class)
+        ->public()
+        ->tag('controller.service_arguments');
     $services->set(FilenameResolver::class);
     $services->set(ExportPayloadFactory::class);
     $services->set(ExportFieldFormatResolver::class);
@@ -63,6 +67,9 @@ return static function (ContainerConfigurator $container): void {
     $services->set(XlsxExporter::class)
         ->tag('joris_dugue_easyadmin_extra.exporter');
 
+    $services->set(XmlExporter::class)
+        ->tag('joris_dugue_easyadmin_extra.exporter');
+
     $services->set(ExporterRegistry::class)
         ->arg('$exporters', tagged_iterator('joris_dugue_easyadmin_extra.exporter'));
 
@@ -70,6 +77,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(ExportManager::class);
     $services->set(ExportFieldValueResolver::class);
     $services->set(ExportRequestResolver::class);
+    $services->set(ExportSetMetadataResolver::class);
     $services->set(ExportContextFactory::class);
     $services->set(EntityQueryBuilderFactory::class);
     $services->set(ExportPreviewInspector::class);

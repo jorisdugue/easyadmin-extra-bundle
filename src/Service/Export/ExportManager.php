@@ -8,6 +8,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPreview;
+use JorisDugue\EasyAdminExtraBundle\Dto\ExportSetMetadata;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
@@ -16,6 +17,7 @@ use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\EntityQueryBuilderFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportPreviewInspector;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationScopeResolver;
 use ReflectionException;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,6 +36,7 @@ final readonly class ExportManager
         private ExportPreviewInspector $exportPreviewInspector,
         private ExporterRegistry $exporterRegistry,
         private AuthorizationCheckerInterface $authorizationChecker,
+        private ExportSetMetadataResolver $exportSetMetadataResolver,
     ) {}
 
     /**
@@ -43,10 +46,12 @@ final readonly class ExportManager
      */
     public function export(string $crudControllerFqcn, string $format, Request $request): Response
     {
+        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
+        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
         $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
-        $config = $this->exportConfigFactory->create($crudControllerFqcn);
+        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
 
-        $this->assertGranted($config);
+        $this->assertGranted($config, $setMetadata);
         $this->assertFormatSupported($config, $crudController::class, $format);
 
         $context = $this->exportContextFactory->create(
@@ -80,9 +85,11 @@ final readonly class ExportManager
      */
     public function preview(string $crudControllerFqcn, string $format, Request $request): ExportPreview
     {
+        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
+        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
         $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
-        $config = $this->exportConfigFactory->create($crudControllerFqcn);
-        $this->assertGranted($config);
+        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
+        $this->assertGranted($config, $setMetadata);
 
         if (!$config->previewEnabled) {
             throw new AccessDeniedException('Export preview is not enabled for this resource.');
@@ -145,10 +152,12 @@ final readonly class ExportManager
             throw InvalidBatchExportException::emptySelection();
         }
 
+        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
+        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
         $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
-        $config = $this->exportConfigFactory->create($crudControllerFqcn);
+        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
 
-        $this->assertGranted($config);
+        $this->assertGranted($config, $setMetadata);
 
         if (!$config->batchExport) {
             throw new AccessDeniedException('Batch export is not enabled for this resource.');
@@ -182,10 +191,23 @@ final readonly class ExportManager
         return $this->createExportResponse($format, $payload);
     }
 
-    private function assertGranted(ExportConfig $config): void
+    private function assertGranted(ExportConfig $config, ExportSetMetadata $setMetadata): void
     {
-        if (null !== $config->requiredRole && !$this->authorizationChecker->isGranted($config->requiredRole)) {
-            throw new AccessDeniedException(\sprintf('The "%s" role is required to export this resource.', $config->requiredRole));
+        if ([] !== $config->requiredRoles && !$this->isGrantedForAnyRole($config->requiredRoles)) {
+            throw new AccessDeniedException(\sprintf(
+                'One of the following roles is required to export this resource: %s.',
+                implode(', ', $config->requiredRoles),
+            ));
+        }
+
+        $requiredRoles = $setMetadata->getRequiredRoles();
+
+        if ([] !== $requiredRoles && !$this->isGrantedForAnyRole($requiredRoles)) {
+            throw new AccessDeniedException(\sprintf(
+                'One of the following roles is required to access the "%s" export set: %s.',
+                $setMetadata->getName(),
+                implode(', ', $requiredRoles),
+            ));
         }
     }
 
@@ -216,5 +238,24 @@ final readonly class ExportManager
     private function createExportResponse(string $format, ExportPayload $payload): Response
     {
         return $this->exporterRegistry->export($format, $payload);
+    }
+
+    private function toConfigExportSet(ExportSetMetadata $setMetadata): ?string
+    {
+        return 'default' === $setMetadata->getName() ? null : $setMetadata->getName();
+    }
+
+    /**
+     * @param list<string> $roles
+     */
+    private function isGrantedForAnyRole(array $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ($this->authorizationChecker->isGranted($role)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

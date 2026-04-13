@@ -24,7 +24,7 @@ class ExportConfigFactory
      *
      * @throws ReflectionException
      */
-    public function create(object|string $crudController): ExportConfig
+    public function create(object|string $crudController, ?string $exportSet = null): ExportConfig
     {
         $controllerFqcn = \is_object($crudController) ? $crudController::class : $crudController;
         $reflection = new ReflectionClass($controllerFqcn);
@@ -43,12 +43,13 @@ class ExportConfigFactory
 
         return new ExportConfig(
             filename: $attribute->filename,
-            fields: $controllerFqcn::getExportFields(),
+            fields: $controllerFqcn::getExportFields($exportSet),
             formats: $attribute->formats,
             fullExport: $attribute->fullExport,
             filteredExport: $attribute->filteredExport,
             maxRows: $attribute->maxRows,
             requiredRole: $attribute->requiredRole,
+            requiredRoles: $this->resolveRequiredRoles($attribute),
             csvLabel: $attribute->csvLabel,
             xlsxLabel: $attribute->xlsxLabel,
             jsonLabel: $attribute->jsonLabel,
@@ -63,5 +64,25 @@ class ExportConfigFactory
             batchExport: $attribute->batchExport,
             batchExportLabel: $attribute->batchExportLabel,
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveRequiredRoles(AdminExport $attribute): array
+    {
+        $roles = $attribute->requiredRoles;
+
+        if (null !== $attribute->requiredRole) {
+            $roles[] = $attribute->requiredRole;
+        }
+
+        $roles = array_map(static fn (string $role): string => trim($role), $roles);
+        $roles = array_filter($roles, static fn (string $role): bool => '' !== $role);
+
+        /** @var list<string> $roles */
+        $roles = array_values(array_unique($roles));
+
+        return $roles;
     }
 }
