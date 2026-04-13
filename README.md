@@ -14,14 +14,17 @@ Export and data safety tools for EasyAdmin 5 (Symfony 7.4/8, PHP 8.2+, PHP 8.5 r
 ## 🧠 Overview
 
 EasyAdmin Extra Bundle extends EasyAdmin with **advanced export capabilities and data control tools**, while staying aligned with EasyAdmin conventions and keeping behavior explicit.
+
 It provides:
 
-* 📤 Structured data exports (CSV, XLSX, JSON, XML)
-* 🔒 Strong security defaults (GDPR-friendly)
-* 🧩 Independent export field system
-* ⚙️ High performance (streaming, large datasets)
-* 👀 Optional preview flow before download
-* 📦 Batch export for selected rows directly from EasyAdmin
+* 📤 Structured data exports (**CSV, XLSX, JSON, XML**)
+* 🧩 An **independent export field system**
+* 🗂️ **Export sets / profiles** for multiple export schemas per CRUD
+* 🔒 Strong security defaults (**masking, formula protection, role-based access**)
+* 👀 Optional **preview flow** before download
+* 📦 **Batch export** for selected rows directly from EasyAdmin
+* ⚙️ Flexible action display (**buttons or dropdown**)
+* ⚡ High performance for large datasets
 
 ---
 
@@ -39,6 +42,7 @@ This allows you to:
 * compute custom values at export time
 * apply masking and transformations only for export
 * control column order independently
+* define multiple export schemas for the same CRUD
 * keep your admin UI simple while exposing richer data externally
 
 ---
@@ -49,6 +53,7 @@ EasyAdmin is great for CRUD operations, but real-world backoffices often need mo
 
 * exporting large datasets safely
 * exporting only a selected subset of rows
+* exposing different export schemas for different teams or use cases
 * masking sensitive data (GDPR, finance, healthcare…)
 * applying transformations at export time
 * handling large datasets efficiently
@@ -62,8 +67,8 @@ It is designed to be **non-intrusive**: opt-in with `#[AdminExport]`, explicit b
 
 ### 📤 Export
 
-* CSV (streamed, memory efficient)
-* XLSX (spreadsheet export)
+* CSV export (streamed, memory efficient)
+* XLSX export
 * JSON export
 * XML export
 * Full export or filtered export (EasyAdmin context-aware)
@@ -72,42 +77,62 @@ It is designed to be **non-intrusive**: opt-in with `#[AdminExport]`, explicit b
 * Custom filename support
 * Configurable max rows
 * Field-level transformations
-* Custom export schema (independent from EasyAdmin fields)
+* Custom export schema independent from EasyAdmin fields
+* Multiple **export sets / profiles** per CRUD
 
----
+### 🗂️ Export sets / profiles
+
+A single CRUD can expose multiple export configurations.
+
+Typical use cases:
+
+* **default** export for day-to-day operations
+* **gdpr** export with masked or restricted fields
+* **finance** export with accounting-specific columns
+* **support** export with operational data only
+
+Each export set can define:
+
+* its own field list
+* its own labels
+* its own role restrictions
+* its own visibility in the UI
+
+⚠️ If you implement export sets explicitly, a `default` set is required.
+
+Export set names are validated and must use lowercase letters, digits, `_` or `-`.
 
 ### 🔒 Security
 
 * Protection against spreadsheet formula injection (CSV & XLSX)
 * Safe defaults (formulas disabled by default)
-* Role-based access control (`requiredRole`)
+* Role-based access control (`requiredRole` / `requiredRoles`)
+* Role-restricted export sets
+* Role-based field visibility
 * Opt-in export via attribute
 * Full sanitization of exported values
 * Strict row count validation to enforce export limits safely
-* Built-in masking:
+* Built-in masking helpers:
 
   * `mask()`
   * `redact()`
   * `partialMask()`
 
----
-
 ### ⚡ Performance
 
 * CSV exports are streamed (`php://output`)
 * Uses Doctrine `toIterable()` (no full dataset in memory)
-* Optional EntityManager clearing
+* Optional EntityManager clearing during iteration
 * Strict row count validation before export
 * Designed for large datasets
-
----
 
 ### 🧩 Developer Experience
 
 * Attribute-based configuration (`#[AdminExport]`)
 * Independent export field system
 * Transformers & formatters
-* Extensible architecture
+* Export sets / profile metadata
+* Extensible architecture with dedicated exporters
 
 ---
 
@@ -134,7 +159,7 @@ Without this configuration, export routes will not be generated.
 
 ---
 
-### ⚙️ Configuration (optional)
+## ⚙️ Configuration (optional)
 
 By default, the bundle scans the following directory to discover dashboards and CRUD controllers:
 
@@ -150,6 +175,22 @@ joris_dugue_easyadmin_extra:
     - '%kernel.project_dir%/src/Admin'
     - '%kernel.project_dir%/modules'
 ```
+
+### Default action display
+
+You can configure how export actions are displayed globally:
+
+```yaml
+# config/packages/easyadmin_extra.yaml
+joris_dugue_easyadmin_extra:
+  export:
+    action_display: dropdown
+```
+
+Supported values:
+
+* `dropdown`
+* `buttons`
 
 ### 🧠 How discovery works
 
@@ -191,27 +232,142 @@ class UserCrudController extends AbstractCrudController
 
 ---
 
+## 🧾 `#[AdminExport]` options
+
+The `#[AdminExport]` attribute lets you configure the export behavior of a CRUD controller.
+
+Common options include:
+
+* `filename`
+* `formats`
+* `maxRows`
+* `fullExport`
+* `filteredExport`
+* `previewEnabled`
+* `previewLimit`
+* `previewLabel`
+* `batchExport`
+* `batchExportLabel`
+* `requiredRole`
+* `requiredRoles`
+* `csvLabel`
+* `xlsxLabel`
+* `jsonLabel`
+* `xmlLabel`
+* `actionDisplay`
+* `routeName`
+* `routePath`
+* `allowSpreadsheetFormulas`
+
+Example:
+
+```php
+#[AdminExport(
+    filename: 'users_export',
+    formats: ['csv', 'xlsx', 'json'],
+    maxRows: 10000,
+    previewEnabled: true,
+    previewLabel: 'Preview export',
+    batchExport: true,
+    batchExportLabel: 'Export selection',
+    requiredRoles: ['ROLE_ADMIN', 'ROLE_MANAGER'],
+    csvLabel: 'CSV download',
+    actionDisplay: 'dropdown',
+)]
+class UserCrudController extends AbstractCrudController
+{
+}
+```
+
+---
+
 ## 🧩 Export Fields
 
 Define your export schema independently from EasyAdmin:
 
 ```php
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
-use JorisDugue\EasyAdminExtraBundle\Field\TextExportField;
 use JorisDugue\EasyAdminExtraBundle\Field\DateTimeExportField;
+use JorisDugue\EasyAdminExtraBundle\Field\TextExportField;
 
 class UserCrudController extends AbstractCrudController implements ExportFieldsProviderInterface
 {
-    public static function getExportFields(): array
+    public static function getExportFields(?string $exportSet = null): array
     {
-        return [
-            TextExportField::new('email', 'Email'),
-            TextExportField::new('phone')->partialMask(2, 2),
-            DateTimeExportField::new('createdAt', 'Created at'),
-        ];
+        return match ($exportSet) {
+            'gdpr' => [
+                TextExportField::new('email', 'Email')->mask(),
+                TextExportField::new('phone', 'Phone')->partialMask(2, 2),
+                DateTimeExportField::new('createdAt', 'Created at'),
+            ],
+            default => [
+                TextExportField::new('email', 'Email'),
+                TextExportField::new('phone', 'Phone'),
+                DateTimeExportField::new('createdAt', 'Created at'),
+            ],
+        };
     }
 }
 ```
+
+---
+
+## 🗂️ Export Sets / Profiles
+
+Use export sets to expose multiple export schemas for the same CRUD controller.
+
+```php
+use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
+use JorisDugue\EasyAdminExtraBundle\Contract\ExportSetMetadataProviderInterface;
+use JorisDugue\EasyAdminExtraBundle\Dto\ExportSetMetadata;
+use JorisDugue\EasyAdminExtraBundle\Field\DateTimeExportField;
+use JorisDugue\EasyAdminExtraBundle\Field\MoneyExportField;
+use JorisDugue\EasyAdminExtraBundle\Field\TextExportField;
+
+class UserCrudController extends AbstractCrudController implements ExportFieldsProviderInterface, ExportSetMetadataProviderInterface
+{
+    public static function getExportSetMetadata(): array
+    {
+        return [
+            new ExportSetMetadata('default', 'Standard export'),
+            new ExportSetMetadata('gdpr', 'GDPR export', ['ROLE_ADMIN']),
+            new ExportSetMetadata('finance', 'Finance export', ['ROLE_FINANCE']),
+        ];
+    }
+
+    public static function getExportFields(?string $exportSet = null): array
+    {
+        return match ($exportSet) {
+            'gdpr' => [
+                TextExportField::new('email', 'Email')->mask(),
+                TextExportField::new('phone', 'Phone')->partialMask(2, 2),
+                DateTimeExportField::new('createdAt', 'Created at'),
+            ],
+            'finance' => [
+                TextExportField::new('email', 'Email'),
+                MoneyExportField::new('balance', 'Balance'),
+                DateTimeExportField::new('createdAt', 'Created at'),
+            ],
+            default => [
+                TextExportField::new('email', 'Email'),
+                TextExportField::new('phone', 'Phone'),
+                DateTimeExportField::new('createdAt', 'Created at'),
+            ],
+        };
+    }
+}
+```
+
+### Why use export sets?
+
+Export sets are useful when different consumers need different export contracts:
+
+* internal operations vs compliance
+* finance vs support
+* raw data vs masked data
+* full export vs reduced export
+
+👉 Export sets are resolved consistently across standard export, preview, and batch export flows.
 
 ---
 
@@ -255,7 +411,7 @@ TextExportField::new('company.address.city', 'City')
     ->nullSafe();
 ```
 
-If any part of the path is null or inaccessible, the value will be null instead of throwing an exception.
+If any part of the path is null or inaccessible, the value will be `null` instead of throwing an exception.
 
 ### 🔁 Combine with default values
 
@@ -284,16 +440,57 @@ Result:
 
 ---
 
-### GDPR / masking
+## 🔒 Masking and transformations
 
 ```php
 TextExportField::new('email')->mask();
 TextExportField::new('phone')->partialMask(2, 2);
+TextExportField::new('ssn')->redact();
 ```
+
+You can also combine masking with format-specific behavior and custom transformers.
 
 ---
 
-### Field ordering
+## 🔐 Field visibility and labels
+
+Fields can be customized depending on **roles** and **formats**.
+
+### By role
+
+You can:
+
+* show fields only for some roles
+* hide fields for some roles
+* override labels depending on the current role
+
+Typical helpers include:
+
+* `onlyForRole()` / `onlyForRoles()`
+* `hideForRole()` / `hideForRoles()`
+* `showForRole()` / `showForRoles()`
+* `setLabelForRole()` / `setLabelsForRoles()`
+
+### By format
+
+You can also customize field visibility and labels depending on the export format:
+
+* show fields only in some formats
+* hide fields in some formats
+* override labels depending on the current format
+
+Typical helpers include:
+
+* `onlyOnFormat()` / `onlyOnFormats()`
+* `hideOnFormat()` / `hideOnFormats()`
+* `showOnFormat()` / `showOnFormats()`
+* `setLabelForFormat()` / `setLabelsForFormats()`
+
+This makes it possible to expose different columns and labels depending on the target audience and output format.
+
+---
+
+## 🧭 Field ordering
 
 By default, fields are exported in declaration order.
 
@@ -308,7 +505,38 @@ Fields with a defined position are sorted first, then remaining fields keep thei
 
 ---
 
-### Batch export
+## 🔄 Custom row mapping
+
+If you need full control over the exported row structure, you can implement `CustomExportRowMapperInterface`.
+
+```php
+use JorisDugue\EasyAdminExtraBundle\Contract\CustomExportRowMapperInterface;
+
+class UserCrudController extends AbstractCrudController implements CustomExportRowMapperInterface
+{
+    public function mapExportRow(object $entity): array
+    {
+        return [
+            'email' => $entity->getEmail(),
+            'phone' => $entity->getPhone(),
+            'createdAt' => $entity->getCreatedAt()?->format('Y-m-d H:i:s'),
+        ];
+    }
+}
+```
+
+### Important behavior
+
+* returned rows must be keyed by the configured export property names
+* all configured export properties must be present
+* missing keys trigger an explicit exception
+* additional keys are ignored
+
+👉 This contract is useful when you want to fully control how export rows are built while still reusing the bundle’s field ordering, labels, masking, and exporter pipeline.
+
+---
+
+## 📦 Batch export
 
 You can export **only selected entities** directly from EasyAdmin using batch actions.
 
@@ -324,7 +552,23 @@ class UserCrudController extends AbstractCrudController
 
 👉 This automatically adds batch export actions in EasyAdmin for supported formats.
 
-### Preview flow
+### How batch export works
+
+* select rows in the EasyAdmin list view
+* use the batch action dropdown
+* choose an export format
+* only selected entities are exported
+
+### Batch export behavior
+
+* uses Doctrine metadata to detect identifier type
+* supports integer and string identifiers
+* rejects composite identifiers with an explicit exception
+* fully reuses the export configuration (fields, masking, limits, sets, formats)
+
+---
+
+## 👀 Preview flow
 
 You can enable an export preview page before download:
 
@@ -339,32 +583,26 @@ class UserCrudController extends AbstractCrudController
 }
 ```
 
-Preview uses the same export configuration (field visibility, masking, labels, formats), so what users validate is aligned with actual export output.
+Preview uses the same export configuration as the final export:
 
-### How batch export works
+* field visibility
+* masking
+* labels
+* formats
+* export set selection
 
-* select rows in the EasyAdmin list view
-* use the batch action dropdown
-* choose an export format
-* only selected entities are exported
-
-### Batch export behavior
-
-* uses Doctrine metadata to detect identifier type
-* supports integer and string identifiers
-* rejects composite identifiers with an explicit exception
-* fully reuses the export configuration (fields, masking, limits, formats)
+👉 What users validate is aligned with actual export output.
 
 ---
 
-### Custom export count
+## 🔢 Custom export count
 
-In some cases, the default export count strategy cannot reliably determine
-how many rows will be exported (e.g. grouped queries or complex joins).
+In some cases, the default export count strategy cannot reliably determine how many rows will be exported (for example grouped queries or complex joins).
 
 To handle these situations, you can provide your own count query:
 
 ```php
+use Doctrine\ORM\QueryBuilder;
 use JorisDugue\EasyAdminExtraBundle\Contract\CustomExportCountQueryBuilderInterface;
 
 class OrderCrudController extends AbstractCrudController implements CustomExportCountQueryBuilderInterface
@@ -392,6 +630,7 @@ This bundle integrates directly with EasyAdmin:
 * respects sorting
 * works directly with CRUD controllers
 * supports exporting selected rows via batch actions
+* supports export sets across the UI flow
 * no manual query handling required
 
 👉 Export reflects the current admin context.
@@ -417,7 +656,7 @@ Output (CSV / XLSX / JSON / XML)
 ## 📄 Supported Formats
 
 | Format | Notes                             |
-|--------|-----------------------------------|
+| ------ | --------------------------------- |
 | CSV    | Streamed, best for large datasets |
 | XLSX   | Spreadsheet export                |
 | JSON   | Structured data                   |
@@ -438,6 +677,16 @@ allowSpreadsheetFormulas: true
 ```
 
 ⚠️ **Warning:** This can expose users to security risks if exported data is untrusted.
+
+### Role restrictions
+
+You can restrict:
+
+* the export itself via `requiredRole` or `requiredRoles`
+* individual export sets via metadata roles
+* individual fields via field-level visibility rules
+
+This makes it possible to expose different exports depending on the current user.
 
 ---
 
@@ -500,6 +749,7 @@ This ensures:
 | Data masking                 | ❌                | ✅           |
 | Formula protection           | ❌                | ✅           |
 | Custom export schema         | ❌                | ✅           |
+| Export sets / profiles       | ❌                | ✅           |
 | Batch export (selected rows) | ❌                | ✅           |
 
 ---
@@ -517,10 +767,13 @@ This ensures:
 ## 🛣️ Roadmap
 
 * [x] Batch export (selected rows)
-* [ ] Advanced batch operations (update / delete / workflows)
-* [ ] Export presets / profiles
-* [ ] Role-based field visibility
+* [x] Export sets / profiles
+* [x] Role-based field visibility
+* [ ] Additional exporter-level configuration options
 * [ ] Additional field helpers
+* [ ] Advanced batch operations (update / delete / workflows)
+* [ ] Audit trail for exports
+* [ ] Async exports for heavy datasets
 
 ---
 
