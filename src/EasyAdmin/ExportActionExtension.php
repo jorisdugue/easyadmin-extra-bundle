@@ -19,10 +19,10 @@ use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
+use JorisDugue\EasyAdminExtraBundle\Service\Operation\RoleAuthorizationChecker;
 use ReflectionException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\RouterInterface;
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Throwable;
 
 /**
@@ -37,7 +37,7 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         private RouterInterface $router,
         private ExportRequestResolver $exportRequestResolver,
         private ExportRouteMetadataResolver $exportRouteMetadataResolver,
-        private AuthorizationCheckerInterface $authorizationChecker,
+        private RoleAuthorizationChecker $roleAuthorizationChecker,
         private ExportSetMetadataResolver $exportSetMetadataResolver,
     ) {}
 
@@ -309,37 +309,14 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
      */
     private function filterGrantedExportSets(array $exportSets, ExportConfig $config): array
     {
-        if ([] !== $config->requiredRoles && !$this->isGrantedForAnyRole($config->requiredRoles)) {
+        if ([] !== $config->requiredRoles && !$this->roleAuthorizationChecker->isGrantedForAnyRole($config->requiredRoles)) {
             return [];
         }
 
         return array_values(array_filter(
             $exportSets,
-            fn (ExportSetMetadata $exportSet): bool => $this->isGrantedForExportSet($exportSet),
+            fn (ExportSetMetadata $exportSet): bool => $this->roleAuthorizationChecker->isGrantedForAnyRole($exportSet->getRequiredRoles()),
         ));
-    }
-
-    private function isGrantedForExportSet(ExportSetMetadata $exportSet): bool
-    {
-        return $this->isGrantedForAnyRole($exportSet->getRequiredRoles());
-    }
-
-    /**
-     * @param list<string> $roles
-     */
-    private function isGrantedForAnyRole(array $roles): bool
-    {
-        if ([] === $roles) {
-            return true;
-        }
-
-        foreach ($roles as $role) {
-            if ($this->authorizationChecker->isGranted($role)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

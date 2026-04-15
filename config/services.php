@@ -17,6 +17,7 @@ use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\EntityQueryBuilderFactory;
+use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationAdminContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
@@ -32,6 +33,7 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntityMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntitySelectionResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationContextResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationRequestMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationScopeResolver;
 use JorisDugue\EasyAdminExtraBundle\Routing\AdminExportRouteLoader;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExporterRegistry;
@@ -39,6 +41,7 @@ use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
 use JorisDugue\EasyAdminExtraBundle\Service\SpreadsheetCellSanitizerService;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
+use JorisDugue\EasyAdminExtraBundle\Service\Operation\RoleAuthorizationChecker;
 
 return static function (ContainerConfigurator $container): void {
     $services = $container->services()
@@ -48,7 +51,10 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(ExportConfigFactory::class)
         ->arg('$defaultActionDisplay', param('joris_dugue_easyadmin_extra.export.action_display'));
+    $services->set(OperationRequestMetadataResolver::class);
+    $services->set(OperationAdminContextFactory::class);
     $services->set(PropertyValueReader::class);
+    $services->set(RoleAuthorizationChecker::class);
     $services->set(CrudControllerResolver::class)
         ->arg('$container', service('service_container'));
     $services->set(DashboardResolver::class)
