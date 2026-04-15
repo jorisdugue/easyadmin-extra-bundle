@@ -19,6 +19,7 @@ use JorisDugue\EasyAdminExtraBundle\Contract\ExporterInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
@@ -92,6 +93,19 @@ final class ExportManagerTest extends TestCase
 
         $manager->exportBatch(ExportManagerCrudController::class, ExportFormat::XML, [], new Request());
     }
+
+    public function testBatchExportRejectsUnsupportedFormat(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $capturingExporter = new CapturingExporter(ExportFormat::XML);
+        $manager = $this->createManager($capturingExporter, $entityManager);
+
+        $this->expectException(InvalidExportConfigurationException::class);
+        $this->expectExceptionMessage('is not enabled for CRUD');
+
+        $manager->exportBatch(ExportManagerCrudController::class, ExportFormat::JSON, ['42'], new Request());
+    }
+
 
     private function createManager(CapturingExporter $exporter, EntityManagerInterface $entityManager): ExportManager
     {

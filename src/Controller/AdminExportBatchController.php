@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Controller;
 
-use InvalidArgumentException;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationAdminContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationRequestMetadataResolver;
@@ -43,7 +43,7 @@ final class AdminExportBatchController extends AbstractController
         ));
 
         if ([] === $ids) {
-            throw new InvalidArgumentException('Batch export requires at least one selected entity ID.');
+            throw InvalidBatchExportException::emptySelection();
         }
 
         $this->operationAdminContextFactory->createForRequest($request, $metadata, $this->crudActionNameResolver->resolve($request));
