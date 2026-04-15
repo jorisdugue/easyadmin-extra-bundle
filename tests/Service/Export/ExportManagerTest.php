@@ -106,7 +106,6 @@ final class ExportManagerTest extends TestCase
         $manager->exportBatch(ExportManagerCrudController::class, ExportFormat::JSON, ['42'], new Request());
     }
 
-
     private function createManager(CapturingExporter $exporter, EntityManagerInterface $entityManager): ExportManager
     {
         $crudController = new ExportManagerCrudController();

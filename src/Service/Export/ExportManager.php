@@ -46,12 +46,8 @@ final readonly class ExportManager
      */
     public function export(string $crudControllerFqcn, string $format, Request $request): Response
     {
-        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
-        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
-        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
-        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
+        [$crudController, $config] = $this->resolveAuthorizedCrudAndConfig($crudControllerFqcn, $request);
 
-        $this->assertGranted($config, $setMetadata);
         $this->assertFormatSupported($config, $crudController::class, $format);
 
         $context = $this->exportContextFactory->create(
@@ -84,11 +80,7 @@ final readonly class ExportManager
      */
     public function preview(string $crudControllerFqcn, string $format, Request $request): ExportPreview
     {
-        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
-        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
-        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
-        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
-        $this->assertGranted($config, $setMetadata);
+        [$crudController, $config] = $this->resolveAuthorizedCrudAndConfig($crudControllerFqcn, $request);
 
         if (!$config->previewEnabled) {
             throw new AccessDeniedException('Export preview is not enabled for this resource.');
@@ -150,12 +142,7 @@ final readonly class ExportManager
             throw InvalidBatchExportException::emptySelection();
         }
 
-        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
-        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
-        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
-        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
-
-        $this->assertGranted($config, $setMetadata);
+        [$crudController, $config] = $this->resolveAuthorizedCrudAndConfig($crudControllerFqcn, $request);
 
         if (!$config->batchExport) {
             throw new AccessDeniedException('Batch export is not enabled for this resource.');
@@ -233,5 +220,24 @@ final readonly class ExportManager
     private function toConfigExportSet(ExportSetMetadata $setMetadata): ?string
     {
         return 'default' === $setMetadata->getName() ? null : $setMetadata->getName();
+    }
+
+    /**
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     *
+     * @return array{0: AbstractCrudController<object>, 1: ExportConfig}
+     *
+     * @throws ReflectionException
+     */
+    private function resolveAuthorizedCrudAndConfig(string $crudControllerFqcn, Request $request): array
+    {
+        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
+        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
+        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
+        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
+
+        $this->assertGranted($config, $setMetadata);
+
+        return [$crudController, $config];
     }
 }
