@@ -11,7 +11,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Contracts\Provider\AdminContextProviderInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Factory\FilterFactory;
-use EasyCorp\Bundle\EasyAdminBundle\Security\AuthorizationChecker;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
