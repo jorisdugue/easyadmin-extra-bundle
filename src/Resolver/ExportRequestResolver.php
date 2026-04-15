@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JorisDugue\EasyAdminExtraBundle\Resolver;
 
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\ActiveIndexContextResolver;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -12,18 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class ExportRequestResolver
 {
-    /**
-     * Returns true when the current request contains an active EasyAdmin index context,
-     * meaning at least one search, filter, or sort parameter is applied.
-     */
-    public function hasActiveContext(Request $request): bool
-    {
-        $hasSearch = '' !== trim((string) ($request->query->get('query') ?? ''));
-        $hasFilters = [] !== $request->query->all('filters');
-        $hasSort = [] !== $request->query->all('sort');
-
-        return $hasSearch || $hasFilters || $hasSort;
-    }
+    public function __construct(private readonly ActiveIndexContextResolver $activeIndexContextResolver) {}
 
     /**
      * Returns true when the export action should be visible for the current request.
@@ -38,6 +28,6 @@ final class ExportRequestResolver
             return false;
         }
 
-        return $this->hasActiveContext($request);
+        return $this->activeIndexContextResolver->hasActiveContext($request);
     }
 }

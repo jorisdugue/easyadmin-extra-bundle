@@ -30,6 +30,7 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\ActiveIndexContextResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntityMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntitySelectionResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationContextResolver;
@@ -88,6 +89,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(ExportSetMetadataResolver::class);
     $services->set(ExportContextFactory::class);
     $services->set(EntityQueryBuilderFactory::class);
+    $services->set(ActiveIndexContextResolver::class);
     $services->set(ExportPreviewInspector::class);
     $services->set(OperationScopeResolver::class);
     $services->set(EntityMetadataResolver::class);

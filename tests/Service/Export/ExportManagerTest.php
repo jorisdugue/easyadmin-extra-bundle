@@ -11,6 +11,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Contracts\Provider\AdminContextProviderInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Factory\FilterFactory;
+use EasyCorp\Bundle\EasyAdminBundle\Security\AuthorizationChecker;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
@@ -31,12 +32,14 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\ActiveIndexContextResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntityMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntitySelectionResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationContextResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationScopeResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExporterRegistry;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
+use JorisDugue\EasyAdminExtraBundle\Service\Operation\RoleAuthorizationChecker;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
 use LogicException;
@@ -174,7 +177,7 @@ final class ExportManagerTest extends TestCase
             new ExportConfigFactory(),
             new ExportContextFactory(
                 new Security($securityContainer),
-                new OperationScopeResolver(),
+                new OperationScopeResolver(new ActiveIndexContextResolver()),
                 new EntityMetadataResolver($entityManager),
                 new OperationContextFactory(),
             ),
@@ -196,8 +199,8 @@ final class ExportManagerTest extends TestCase
             ),
             new ExportPreviewInspector(),
             new ExporterRegistry([$exporter]),
-            $authorizationChecker,
             new ExportSetMetadataResolver(),
+            new RoleAuthorizationChecker($authorizationChecker),
         );
     }
 

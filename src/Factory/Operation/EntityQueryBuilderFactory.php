@@ -6,7 +6,6 @@ namespace JorisDugue\EasyAdminExtraBundle\Factory\Operation;
 
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
-use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntityMetadataResolver;
@@ -31,7 +30,6 @@ final readonly class EntityQueryBuilderFactory
         AbstractCrudController $crudController,
         Request $request,
         string $scope,
-        ExportConfig $config,
         array $selectedIds = [],
     ): QueryBuilder {
         return match ($scope) {

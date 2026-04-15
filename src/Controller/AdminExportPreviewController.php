@@ -46,13 +46,6 @@ final class AdminExportPreviewController extends AbstractController
             throw $this->createNotFoundException(\sprintf('The export format "%s" is not enabled for preview.', $format));
         }
         $context = $this->operationAdminContextFactory->createForRequest($request, $metadata, $this->crudActionNameResolver->resolve($request));
-        //        $context = $this->adminContextFactory->create(
-        //            $request,
-        //            $this->dashboardResolver->resolve($dashboardControllerFqcn),
-        //            $this->controllerResolver->resolve($crudControllerFqcn),
-        //            $this->crudActionNameResolver->resolve($request),
-        //        );
-        //        $request->attributes->set(EA::CONTEXT_REQUEST_ATTRIBUTE, $context);
 
         $preview = $this->exportManager->preview($metadata->crudControllerFqcn, $format, $request);
         $dashboardRouteName = (string) $context->getDashboardRouteName();
