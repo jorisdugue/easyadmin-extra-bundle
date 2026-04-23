@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Controller;
 
-use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
-use EasyCorp\Bundle\EasyAdminBundle\Contracts\Controller\DashboardControllerInterface;
-use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
-use EasyCorp\Bundle\EasyAdminBundle\Factory\AdminContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
-use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
-use JorisDugue\EasyAdminExtraBundle\Resolver\DashboardResolver;
+use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationAdminContextFactory;
+use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationRequestMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
 use ReflectionException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -23,12 +20,12 @@ use Symfony\Component\Routing\RouterInterface;
 final class AdminExportPreviewController extends AbstractController
 {
     public function __construct(
-        private readonly AdminContextFactory $adminContextFactory,
-        private readonly CrudControllerResolver $controllerResolver,
-        private readonly DashboardResolver $dashboardResolver,
+        private readonly CrudActionNameResolver $crudActionNameResolver,
         private readonly ExportConfigFactory $exportConfigFactory,
         private readonly ExportManager $exportManager,
         private readonly ExportRouteMetadataResolver $exportRouteMetadataResolver,
+        private readonly OperationRequestMetadataResolver $operationRequestMetadataResolver,
+        private readonly OperationAdminContextFactory $operationAdminContextFactory,
         private readonly RouterInterface $router,
     ) {}
 
@@ -37,23 +34,9 @@ final class AdminExportPreviewController extends AbstractController
      */
     public function __invoke(Request $request): Response
     {
-        $rawCrudControllerFqcn = $request->attributes->get('_jd_ea_extra_crud', '');
-        $rawDashboardControllerFqcn = $request->attributes->get('_jd_ea_extra_dashboard', '');
+        $metadata = $this->operationRequestMetadataResolver->resolveWithoutFormat($request, 'export preview');
 
-        if (!\is_string($rawCrudControllerFqcn) || '' === trim($rawCrudControllerFqcn)) {
-            throw $this->createNotFoundException('No CRUD controller was provided for export preview.');
-        }
-
-        if (!\is_string($rawDashboardControllerFqcn) || '' === trim($rawDashboardControllerFqcn)) {
-            throw $this->createNotFoundException('No dashboard controller was provided for export preview.');
-        }
-
-        /** @var class-string<AbstractCrudController<object>> $crudControllerFqcn */
-        $crudControllerFqcn = trim($rawCrudControllerFqcn);
-        /** @var class-string<DashboardControllerInterface> $dashboardControllerFqcn */
-        $dashboardControllerFqcn = trim($rawDashboardControllerFqcn);
-
-        $config = $this->exportConfigFactory->create($crudControllerFqcn);
+        $config = $this->exportConfigFactory->create($metadata->crudControllerFqcn);
         $requestedFormat = $request->query->getString('format');
         $format = '' !== $requestedFormat
             ? ExportFormat::normalize($requestedFormat)
@@ -62,19 +45,11 @@ final class AdminExportPreviewController extends AbstractController
         if (!$config->supportsFormat($format)) {
             throw $this->createNotFoundException(\sprintf('The export format "%s" is not enabled for preview.', $format));
         }
-        $rawActionName = $request->query->get(EA::CRUD_ACTION);
-        $actionName = \is_string($rawActionName) ? $rawActionName : null;
-        $context = $this->adminContextFactory->create(
-            $request,
-            $this->dashboardResolver->resolve($dashboardControllerFqcn),
-            $this->controllerResolver->resolve($crudControllerFqcn),
-            $actionName,
-        );
-        $request->attributes->set(EA::CONTEXT_REQUEST_ATTRIBUTE, $context);
+        $context = $this->operationAdminContextFactory->createForRequest($request, $metadata, $this->crudActionNameResolver->resolve($request));
 
-        $preview = $this->exportManager->preview($crudControllerFqcn, $format, $request);
+        $preview = $this->exportManager->preview($metadata->crudControllerFqcn, $format, $request);
         $dashboardRouteName = (string) $context->getDashboardRouteName();
-        $crudRouteName = $this->exportRouteMetadataResolver->resolveRouteName($crudControllerFqcn, $config);
+        $crudRouteName = $this->exportRouteMetadataResolver->resolveRouteName($metadata->crudControllerFqcn, $config);
         $currentQuery = $request->query->all();
         unset($currentQuery['format']);
 

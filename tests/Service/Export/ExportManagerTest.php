@@ -19,6 +19,7 @@ use JorisDugue\EasyAdminExtraBundle\Contract\ExporterInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
@@ -31,12 +32,14 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\ActiveIndexContextResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntityMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntitySelectionResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationContextResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationScopeResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExporterRegistry;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
+use JorisDugue\EasyAdminExtraBundle\Service\Operation\RoleAuthorizationChecker;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
 use LogicException;
@@ -89,6 +92,18 @@ final class ExportManagerTest extends TestCase
         $this->expectException(InvalidBatchExportException::class);
 
         $manager->exportBatch(ExportManagerCrudController::class, ExportFormat::XML, [], new Request());
+    }
+
+    public function testBatchExportRejectsUnsupportedFormat(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $capturingExporter = new CapturingExporter(ExportFormat::XML);
+        $manager = $this->createManager($capturingExporter, $entityManager);
+
+        $this->expectException(InvalidExportConfigurationException::class);
+        $this->expectExceptionMessage('is not enabled for CRUD');
+
+        $manager->exportBatch(ExportManagerCrudController::class, ExportFormat::JSON, ['42'], new Request());
     }
 
     private function createManager(CapturingExporter $exporter, EntityManagerInterface $entityManager): ExportManager
@@ -174,7 +189,7 @@ final class ExportManagerTest extends TestCase
             new ExportConfigFactory(),
             new ExportContextFactory(
                 new Security($securityContainer),
-                new OperationScopeResolver(),
+                new OperationScopeResolver(new ActiveIndexContextResolver()),
                 new EntityMetadataResolver($entityManager),
                 new OperationContextFactory(),
             ),
@@ -196,8 +211,8 @@ final class ExportManagerTest extends TestCase
             ),
             new ExportPreviewInspector(),
             new ExporterRegistry([$exporter]),
-            $authorizationChecker,
             new ExportSetMetadataResolver(),
+            new RoleAuthorizationChecker($authorizationChecker),
         );
     }
 

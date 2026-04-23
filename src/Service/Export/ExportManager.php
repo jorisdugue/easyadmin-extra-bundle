@@ -19,10 +19,10 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\CrudControllerResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportPreviewInspector;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationScopeResolver;
+use JorisDugue\EasyAdminExtraBundle\Service\Operation\RoleAuthorizationChecker;
 use ReflectionException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 final readonly class ExportManager
@@ -35,8 +35,8 @@ final readonly class ExportManager
         private EntityQueryBuilderFactory $entityQueryBuilderFactory,
         private ExportPreviewInspector $exportPreviewInspector,
         private ExporterRegistry $exporterRegistry,
-        private AuthorizationCheckerInterface $authorizationChecker,
         private ExportSetMetadataResolver $exportSetMetadataResolver,
+        private RoleAuthorizationChecker $roleAuthorizationChecker,
     ) {}
 
     /**
@@ -46,12 +46,8 @@ final readonly class ExportManager
      */
     public function export(string $crudControllerFqcn, string $format, Request $request): Response
     {
-        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
-        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
-        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
-        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
+        [$crudController, $config] = $this->resolveAuthorizedCrudAndConfig($crudControllerFqcn, $request);
 
-        $this->assertGranted($config, $setMetadata);
         $this->assertFormatSupported($config, $crudController::class, $format);
 
         $context = $this->exportContextFactory->create(
@@ -65,7 +61,6 @@ final readonly class ExportManager
             $crudController,
             $request,
             $context->scope,
-            $config,
         );
 
         $payload = $this->exportPayloadFactory->create(
@@ -85,11 +80,7 @@ final readonly class ExportManager
      */
     public function preview(string $crudControllerFqcn, string $format, Request $request): ExportPreview
     {
-        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
-        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
-        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
-        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
-        $this->assertGranted($config, $setMetadata);
+        [$crudController, $config] = $this->resolveAuthorizedCrudAndConfig($crudControllerFqcn, $request);
 
         if (!$config->previewEnabled) {
             throw new AccessDeniedException('Export preview is not enabled for this resource.');
@@ -108,7 +99,6 @@ final readonly class ExportManager
             $crudController,
             $request,
             $context->scope,
-            $config,
         );
 
         $qb->setFirstResult(0)->setMaxResults($config->previewLimit);
@@ -152,12 +142,7 @@ final readonly class ExportManager
             throw InvalidBatchExportException::emptySelection();
         }
 
-        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
-        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
-        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
-        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
-
-        $this->assertGranted($config, $setMetadata);
+        [$crudController, $config] = $this->resolveAuthorizedCrudAndConfig($crudControllerFqcn, $request);
 
         if (!$config->batchExport) {
             throw new AccessDeniedException('Batch export is not enabled for this resource.');
@@ -177,7 +162,6 @@ final readonly class ExportManager
             $crudController,
             $request,
             $context->scope,
-            $config,
             $ids,
         );
 
@@ -193,13 +177,13 @@ final readonly class ExportManager
 
     private function assertGranted(ExportConfig $config, ExportSetMetadata $setMetadata): void
     {
-        if ([] !== $config->requiredRoles && !$this->isGrantedForAnyRole($config->requiredRoles)) {
+        if ([] !== $config->requiredRoles && !$this->roleAuthorizationChecker->isGrantedForAnyRole($config->requiredRoles)) {
             throw new AccessDeniedException(\sprintf('One of the following roles is required to export this resource: %s.', implode(', ', $config->requiredRoles)));
         }
 
         $requiredRoles = $setMetadata->getRequiredRoles();
 
-        if ([] !== $requiredRoles && !$this->isGrantedForAnyRole($requiredRoles)) {
+        if ([] !== $requiredRoles && !$this->roleAuthorizationChecker->isGrantedForAnyRole($requiredRoles)) {
             throw new AccessDeniedException(\sprintf('One of the following roles is required to access the "%s" export set: %s.', $setMetadata->getName(), implode(', ', $requiredRoles)));
         }
     }
@@ -239,16 +223,21 @@ final readonly class ExportManager
     }
 
     /**
-     * @param list<string> $roles
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     *
+     * @return array{0: AbstractCrudController<object>, 1: ExportConfig}
+     *
+     * @throws ReflectionException
      */
-    private function isGrantedForAnyRole(array $roles): bool
+    private function resolveAuthorizedCrudAndConfig(string $crudControllerFqcn, Request $request): array
     {
-        foreach ($roles as $role) {
-            if ($this->authorizationChecker->isGranted($role)) {
-                return true;
-            }
-        }
+        $requestedSet = $this->exportSetMetadataResolver->normalizeRequestedSet($request->query->get('exportSet'));
+        $setMetadata = $this->exportSetMetadataResolver->resolveRequestedSet($crudControllerFqcn, $requestedSet);
+        $crudController = $this->crudControllerResolver->resolve($crudControllerFqcn);
+        $config = $this->exportConfigFactory->create($crudControllerFqcn, $this->toConfigExportSet($setMetadata));
 
-        return false;
+        $this->assertGranted($config, $setMetadata);
+
+        return [$crudController, $config];
     }
 }

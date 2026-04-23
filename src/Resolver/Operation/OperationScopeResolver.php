@@ -15,6 +15,8 @@ final readonly class OperationScopeResolver
     public const SCOPE_CONTEXT = 'context';
     public const SCOPE_SELECTION = 'selection';
 
+    public function __construct(private readonly ActiveIndexContextResolver $activeIndexContextResolver) {}
+
     /**
      * Resolves the export scope from the current request and export configuration.
      */
@@ -42,11 +44,9 @@ final readonly class OperationScopeResolver
             return self::SCOPE_CONTEXT;
         }
 
-        $hasSearch = '' !== trim((string) ($request->query->get('query') ?? ''));
-        $hasFilters = [] !== $request->query->all('filters');
-        $hasSort = [] !== $request->query->all('sort');
+        $hasActiveContext = $this->activeIndexContextResolver->hasActiveContext($request);
 
-        if ($hasSearch || $hasFilters || $hasSort) {
+        if ($hasActiveContext) {
             if (!$config->filteredExport) {
                 throw new AccessDeniedException('Filtered export is not enabled for this resource.');
             }
