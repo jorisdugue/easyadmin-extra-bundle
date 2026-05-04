@@ -37,6 +37,9 @@ final readonly class XlsxExporter implements ExporterInterface
      */
     public function export(ExportPayload $payload): BinaryFileResponse
     {
+        $filename = str_ends_with($payload->filename, '.xlsx')
+            ? $payload->filename
+            : $payload->filename . '.xlsx';
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
@@ -79,7 +82,7 @@ final readonly class XlsxExporter implements ExporterInterface
             $response = new BinaryFileResponse($tmpFile);
             $response->setContentDisposition(
                 ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-                $payload->filename . '.xlsx',
+                $filename,
             );
             $response->headers->set(
                 'Content-Type',

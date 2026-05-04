@@ -12,19 +12,50 @@ use JorisDugue\EasyAdminExtraBundle\Util\ValueStringifier;
 final class ExportFieldFormatResolver
 {
     /**
+     * @return list<string>
+     */
+    private function normalizeFormatList(mixed $formats): array
+    {
+        if (!\is_array($formats)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($formats as $format) {
+            if (!\is_string($format)) {
+                continue;
+            }
+
+            $format = $this->normalizeFormat($format);
+
+            if (!\in_array($format, $normalized, true)) {
+                $normalized[] = $format;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
      * Determines whether a field is visible for the given export format.
      */
     private function isVisibleForFormat(ExportFieldDto $dto, string $format): bool
     {
-        $visibleFormats = $dto->getCustomOption(ExportFieldOption::VISIBLE_FORMATS);
-        $hiddenFormats = $dto->getCustomOption(ExportFieldOption::HIDDEN_FORMATS);
+        $visibleFormats = $this->normalizeFormatList(
+            $dto->getCustomOption(ExportFieldOption::VISIBLE_FORMATS),
+        );
 
-        if (\is_array($visibleFormats) && [] !== $visibleFormats) {
-            return \in_array($format, $visibleFormats, true);
+        $hiddenFormats = $this->normalizeFormatList(
+            $dto->getCustomOption(ExportFieldOption::HIDDEN_FORMATS),
+        );
+
+        if (\in_array($format, $hiddenFormats, true)) {
+            return false;
         }
 
-        if (\is_array($hiddenFormats) && [] !== $hiddenFormats) {
-            return !\in_array($format, $hiddenFormats, true);
+        if ([] !== $visibleFormats) {
+            return \in_array($format, $visibleFormats, true);
         }
 
         return true;
@@ -40,6 +71,14 @@ final class ExportFieldFormatResolver
         $visibleRoles = $dto->getCustomOption(ExportFieldOption::VISIBLE_ROLES);
         $hiddenRoles = $dto->getCustomOption(ExportFieldOption::HIDDEN_ROLES);
 
+        if (\is_array($hiddenRoles) && [] !== $hiddenRoles) {
+            foreach ($roles as $role) {
+                if (\in_array($role, $hiddenRoles, true)) {
+                    return false;
+                }
+            }
+        }
+
         if (\is_array($visibleRoles) && [] !== $visibleRoles) {
             foreach ($roles as $role) {
                 if (\in_array($role, $visibleRoles, true)) {
@@ -48,14 +87,6 @@ final class ExportFieldFormatResolver
             }
 
             return false;
-        }
-
-        if (\is_array($hiddenRoles) && [] !== $hiddenRoles) {
-            foreach ($roles as $role) {
-                if (\in_array($role, $hiddenRoles, true)) {
-                    return false;
-                }
-            }
         }
 
         return true;

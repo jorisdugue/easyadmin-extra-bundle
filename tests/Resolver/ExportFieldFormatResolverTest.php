@@ -48,13 +48,13 @@ final class ExportFieldFormatResolverTest extends TestCase
         self::assertTrue($this->resolver->isVisible($dto, 'xlsx'));
     }
 
-    public function testIsVisiblePrefersVisibleFormatsOverHiddenFormats(): void
+    public function testIsVisiblePrefersHiddenFormatsOverVisibleFormats(): void
     {
         $dto = new ExportFieldDto();
         $dto->setCustomOption(ExportFieldOption::VISIBLE_FORMATS, ['csv']);
         $dto->setCustomOption(ExportFieldOption::HIDDEN_FORMATS, ['csv', 'json']);
 
-        self::assertTrue($this->resolver->isVisible($dto, 'csv'));
+        self::assertFalse($this->resolver->isVisible($dto, 'csv'));
         self::assertFalse($this->resolver->isVisible($dto, 'json'));
         self::assertFalse($this->resolver->isVisible($dto, 'xlsx'));
     }

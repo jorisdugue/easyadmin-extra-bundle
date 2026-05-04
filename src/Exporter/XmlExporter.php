@@ -35,6 +35,9 @@ final readonly class XmlExporter implements ExporterInterface
      */
     public function export(ExportPayload $payload): Response
     {
+        $filename = str_ends_with($payload->filename, '.xml')
+            ? $payload->filename
+            : $payload->filename . '.xml';
         $document = new DOMDocument('1.0', 'UTF-8');
         $document->formatOutput = true;
 
@@ -66,7 +69,7 @@ final readonly class XmlExporter implements ExporterInterface
 
         $disposition = $response->headers->makeDisposition(
             ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-            $payload->filename . '.xml',
+            $filename,
         );
 
         $response->headers->set('Content-Disposition', $disposition);
