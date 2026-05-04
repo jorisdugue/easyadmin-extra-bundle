@@ -13,12 +13,15 @@ use JorisDugue\EasyAdminExtraBundle\Contract\ExportCountResolverInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
+use JorisDugue\EasyAdminExtraBundle\Event\Export\AfterExportRowEvent;
+use JorisDugue\EasyAdminExtraBundle\Event\Export\BeforeExportRowEvent;
 use JorisDugue\EasyAdminExtraBundle\Exception\ExportLimitExceededException;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidMappedExportRowException;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldFormatResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final readonly class ExportPayloadFactory
 {
@@ -27,6 +30,7 @@ final readonly class ExportPayloadFactory
         private FilenameResolver $filenameResolver,
         private ExportFieldFormatResolver $exportFieldFormatResolver,
         private ExportCountResolverInterface $exportCountResolver,
+        private EventDispatcherInterface $eventDispatcher,
     ) {}
 
     /**
@@ -87,6 +91,7 @@ final readonly class ExportPayloadFactory
      * large exports.
      *
      * @param list<ExportFieldInterface> $enabledFields
+     * @param list<string> $properties
      *
      * @return Generator<int, list<mixed>>
      */
@@ -94,6 +99,9 @@ final readonly class ExportPayloadFactory
         object $crudController,
         QueryBuilder $qb,
         array $enabledFields,
+        ExportContext $context,
+        bool $dispatchEvents,
+        array $properties,
     ): Generator {
         $batchSize = 500;
         $i = 0;
@@ -106,21 +114,39 @@ final readonly class ExportPayloadFactory
 
             if ($crudController instanceof CustomExportRowMapperInterface) {
                 $mappedRow = $crudController->mapExportRow($entity);
-                yield $this->normalizeMappedRow($mappedRow, $enabledFields);
+                $row = $this->normalizeMappedRow($mappedRow, $enabledFields);
             } else {
                 $row = [];
 
                 foreach ($enabledFields as $field) {
                     $row[] = $this->fieldValueResolver->resolve($entity, $field);
                 }
-
-                yield $row;
             }
+
+            yield $dispatchEvents ? $this->dispatchRowEvents($context, $entity, $row, $properties) : $row;
 
             if (0 === (++$i % $batchSize)) {
                 $em->clear();
             }
         }
+    }
+
+    /**
+     * @param list<mixed> $row
+     * @param list<string> $properties
+     *
+     * @return list<mixed>
+     */
+    private function dispatchRowEvents(ExportContext $context, object $entity, array $row, array $properties): array
+    {
+        $beforeEvent = new BeforeExportRowEvent($context, $entity, $row, $properties);
+        $this->eventDispatcher->dispatch($beforeEvent);
+
+        $row = $beforeEvent->getRow();
+
+        $this->eventDispatcher->dispatch(new AfterExportRowEvent($context, $entity, $row, $properties));
+
+        return $row;
     }
 
     /**
@@ -149,7 +175,7 @@ final readonly class ExportPayloadFactory
         $enabledFields = $this->resolveEnabledFields($config, $format, $roles);
         $rows = [];
 
-        foreach ($this->generateRows($crudController, $queryBuilder, $enabledFields) as $row) {
+        foreach ($this->generateRows($crudController, $queryBuilder, $enabledFields, $context, false, []) as $row) {
             $rows[] = $row;
             if (\count($rows) >= $limit) {
                 break;
@@ -266,7 +292,7 @@ final readonly class ExportPayloadFactory
             format: $context->format,
             headers: $headers,
             properties: $properties,
-            rows: $this->generateRows($crudController, $queryBuilder, $enabledFields),
+            rows: $this->generateRows($crudController, $queryBuilder, $enabledFields, $context, true, $properties),
             allowSpreadsheetFormulas: $config->allowSpreadsheetFormulas,
         );
     }

@@ -536,6 +536,56 @@ class UserCrudController extends AbstractCrudController implements CustomExportR
 
 ---
 
+## 🔔 Export events
+
+The export lifecycle dispatches synchronous Symfony events:
+
+* `BeforeExportEvent` before the export response is created
+* `AfterExportEvent` after the export response is created
+* `BeforeExportRowEvent` before an export row is yielded to the exporter
+* `AfterExportRowEvent` after row preparation
+
+`BeforeExportRowEvent` allows row mutation. This is useful for custom formatting or adding/removing row values before the row is written by the exporter.
+
+These events are best suited for cross-cutting concerns such as audit logs, metrics, notifications, or custom integrations.
+
+These events are synchronous and run in the current export request. They do not provide async export.
+
+```php
+namespace App\EventSubscriber;
+
+use JorisDugue\EasyAdminExtraBundle\Event\Export\AfterExportEvent;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+
+final class ExportAuditSubscriber implements EventSubscriberInterface
+{
+    public function __construct(
+        private readonly LoggerInterface $logger,
+    ) {}
+
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            AfterExportEvent::class => 'logExport',
+        ];
+    }
+
+    public function logExport(AfterExportEvent $event): void
+    {
+        $this->logger->info('EasyAdmin export response created.', [
+            'format' => $event->getContext()->format,
+            'scope' => $event->getContext()->scope,
+            'entity' => $event->getContext()->entityName,
+            'filename' => $event->getPayload()->filename,
+            'status_code' => $event->getResponse()->getStatusCode(),
+        ]);
+    }
+}
+```
+
+---
+
 ## 📦 Batch export
 
 You can export **only selected entities** directly from EasyAdmin using batch actions.

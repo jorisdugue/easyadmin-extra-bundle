@@ -18,8 +18,12 @@ use JorisDugue\EasyAdminExtraBundle\Contract\ExportCountResolverInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExporterInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
+use JorisDugue\EasyAdminExtraBundle\Event\Export\AfterExportEvent;
+use JorisDugue\EasyAdminExtraBundle\Event\Export\BeforeExportEvent;
+use JorisDugue\EasyAdminExtraBundle\Event\Export\BeforeExportRowEvent;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
+use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
@@ -41,15 +45,19 @@ use JorisDugue\EasyAdminExtraBundle\Service\Export\ExporterRegistry;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
 use JorisDugue\EasyAdminExtraBundle\Service\Operation\RoleAuthorizationChecker;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
+use JorisDugue\EasyAdminExtraBundle\Service\SpreadsheetCellSanitizerService;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use UnitEnum;
 
 final class ExportManagerTest extends TestCase
@@ -83,6 +91,106 @@ final class ExportManagerTest extends TestCase
         self::assertSame(['Name'], $capturingExporter->lastPayload?->headers);
     }
 
+    public function testBeforeExportEventIsDispatchedBeforeResponseCreation(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new ExportManagerEntity('Alice')]);
+        ExportManagerCrudController::$queryBuilder = $queryBuilder;
+
+        $eventDispatcher = new EventDispatcher();
+        $events = [];
+        $eventDispatcher->addListener(BeforeExportEvent::class, static function (BeforeExportEvent $event) use (&$events): void {
+            $events[] = $event;
+        });
+
+        $capturingExporter = new CapturingExporter(ExportFormat::XML);
+        $manager = $this->createManager($capturingExporter, $entityManager, $eventDispatcher);
+
+        $request = new Request();
+        $request->attributes->set(EA::CRUD_ACTION, 'index');
+
+        $manager->export(ExportManagerCrudController::class, ExportFormat::XML, $request);
+
+        self::assertCount(1, $events);
+        self::assertSame(ExportFormat::XML, $events[0]->getContext()->format);
+        self::assertSame(['Name'], $events[0]->getPayload()->headers);
+    }
+
+    public function testAfterExportEventIsDispatchedAfterResponseCreation(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new ExportManagerEntity('Alice')]);
+        ExportManagerCrudController::$queryBuilder = $queryBuilder;
+
+        $eventDispatcher = new EventDispatcher();
+        $events = [];
+        $eventDispatcher->addListener(AfterExportEvent::class, static function (AfterExportEvent $event) use (&$events): void {
+            $events[] = $event;
+        });
+
+        $capturingExporter = new CapturingExporter(ExportFormat::XML);
+        $manager = $this->createManager($capturingExporter, $entityManager, $eventDispatcher);
+
+        $request = new Request();
+        $request->attributes->set(EA::CRUD_ACTION, 'index');
+
+        $response = $manager->export(ExportManagerCrudController::class, ExportFormat::XML, $request);
+
+        self::assertCount(1, $events);
+        self::assertSame($response, $events[0]->getResponse());
+        self::assertSame(['Name'], $events[0]->getPayload()->headers);
+    }
+
+    public function testBeforeExportRowEventCanMutateRowAndExportedOutput(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new ExportManagerEntity('alice@example.com')]);
+        ExportManagerCrudController::$queryBuilder = $queryBuilder;
+
+        $eventDispatcher = new EventDispatcher();
+        $eventDispatcher->addListener(BeforeExportRowEvent::class, static function (BeforeExportRowEvent $event): void {
+            $emailIndex = array_search('name', $event->getProperties(), true);
+            self::assertSame(0, $emailIndex);
+
+            $row = $event->getRow();
+            $row[$emailIndex] = 'masked@example.com';
+            $event->setRow($row);
+        });
+
+        $manager = $this->createManager(new CsvExporter(new SpreadsheetCellSanitizerService()), $entityManager, $eventDispatcher);
+
+        $request = new Request();
+        $request->attributes->set(EA::CRUD_ACTION, 'index');
+
+        $response = $manager->export(ExportManagerCrudController::class, ExportFormat::CSV, $request);
+
+        self::assertInstanceOf(StreamedResponse::class, $response);
+
+        $content = $this->getStreamedResponseContent($response);
+
+        self::assertStringContainsString('masked@example.com', $content);
+        self::assertStringNotContainsString('alice@example.com', $content);
+    }
+
+    public function testHiddenVisibleFormatAndRoleBehaviorRemainUnchangedWithEvents(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new ExportManagerEntity('Alice')]);
+        ExportManagerCrudController::$queryBuilder = $queryBuilder;
+
+        $manager = $this->createManager(new CapturingExporter(ExportFormat::XML), $entityManager, new EventDispatcher());
+
+        $request = new Request();
+        $request->attributes->set(EA::CRUD_ACTION, 'index');
+
+        $preview = $manager->preview(ExportManagerCrudController::class, ExportFormat::XML, $request);
+        $response = $manager->export(ExportManagerCrudController::class, ExportFormat::XML, $request);
+
+        self::assertSame(['Name'], $preview->headers);
+        self::assertSame([['Alice']], $preview->rows);
+        self::assertSame('captured-xml', $response->getContent());
+    }
+
     public function testBatchExportRejectsEmptySelectionEarly(): void
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
@@ -106,7 +214,7 @@ final class ExportManagerTest extends TestCase
         $manager->exportBatch(ExportManagerCrudController::class, ExportFormat::JSON, ['42'], new Request());
     }
 
-    private function createManager(CapturingExporter $exporter, EntityManagerInterface $entityManager): ExportManager
+    private function createManager(ExporterInterface $exporter, EntityManagerInterface $entityManager, ?EventDispatcherInterface $eventDispatcher = null): ExportManager
     {
         $crudController = new ExportManagerCrudController();
 
@@ -203,6 +311,7 @@ final class ExportManagerTest extends TestCase
                         return 1;
                     }
                 },
+                $eventDispatcher ?? new EventDispatcher(),
             ),
             new EntityQueryBuilderFactory(
                 $operationContextResolver,
@@ -213,7 +322,20 @@ final class ExportManagerTest extends TestCase
             new ExporterRegistry([$exporter]),
             new ExportSetMetadataResolver(),
             new RoleAuthorizationChecker($authorizationChecker),
+            $eventDispatcher ?? new EventDispatcher(),
         );
+    }
+
+    private function getStreamedResponseContent(StreamedResponse $response): string
+    {
+        $callback = $response->getCallback();
+
+        self::assertNotNull($callback);
+
+        ob_start();
+        $callback();
+
+        return (string) ob_get_clean();
     }
 
     /**
