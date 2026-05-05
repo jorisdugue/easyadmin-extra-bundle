@@ -124,7 +124,7 @@ final readonly class EntityQueryBuilderFactory
 
         $queryBuilder
             ->andWhere(\sprintf('%s.%s IN (:selectedIds)', $rootAlias, $identifierField))
-            ->setParameter('selectedIds', $this->entitySelectionResolver->castIds($selection->ids, $identifierType));
+            ->setParameter('selectedIds', $this->entitySelectionResolver->castIds($selection->ids, $identifierType, $entityFqcn));
 
         return $queryBuilder;
     }

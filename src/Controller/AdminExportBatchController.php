@@ -7,6 +7,7 @@ namespace JorisDugue\EasyAdminExtraBundle\Controller;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationAdminContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\BatchExportRequestValidator;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationRequestMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
 use JorisDugue\EasyAdminExtraBundle\Util\ValueStringifier;
@@ -22,6 +23,7 @@ final class AdminExportBatchController extends AbstractController
         private readonly CrudActionNameResolver $crudActionNameResolver,
         private readonly OperationRequestMetadataResolver $operationRequestMetadataResolver,
         private readonly OperationAdminContextFactory $operationAdminContextFactory,
+        private readonly BatchExportRequestValidator $batchExportRequestValidator,
     ) {}
 
     /**
@@ -35,6 +37,7 @@ final class AdminExportBatchController extends AbstractController
     public function __invoke(Request $request): Response
     {
         $metadata = $this->operationRequestMetadataResolver->resolveExport($request, 'batch export');
+        $this->batchExportRequestValidator->validate($request, $metadata->crudControllerFqcn);
 
         $rawIds = $request->request->all('batchActionEntityIds');
         $ids = array_values(array_filter(
