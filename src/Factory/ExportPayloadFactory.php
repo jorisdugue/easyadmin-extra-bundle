@@ -123,7 +123,7 @@ final readonly class ExportPayloadFactory
                 }
             }
 
-            yield $dispatchEvents ? $this->dispatchRowEvents($context, $entity, $row, $properties) : $row;
+            yield $dispatchEvents ? $this->dispatchRowEvents($crudController, $context, $entity, $row, $properties) : $row;
 
             if (0 === (++$i % $batchSize)) {
                 $em->clear();
@@ -137,12 +137,16 @@ final readonly class ExportPayloadFactory
      *
      * @return list<mixed>
      */
-    private function dispatchRowEvents(ExportContext $context, object $entity, array $row, array $properties): array
+    private function dispatchRowEvents(object $crudController, ExportContext $context, object $entity, array $row, array $properties): array
     {
         $beforeEvent = new BeforeExportRowEvent($context, $entity, $row, $properties);
         $this->eventDispatcher->dispatch($beforeEvent);
 
         $row = $beforeEvent->getRow();
+
+        if (\count($row) !== \count($properties)) {
+            throw InvalidMappedExportRowException::invalidColumnCount(\count($properties), \count($row), $crudController::class, $entity::class);
+        }
 
         $this->eventDispatcher->dispatch(new AfterExportRowEvent($context, $entity, $row, $properties));
 

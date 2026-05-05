@@ -24,4 +24,15 @@ final class InvalidMappedExportRowException extends EasyAdminExtraException
             implode(', ', $actualKeys),
         ));
     }
+
+    public static function invalidColumnCount(int $expectedCount, int $actualCount, string $crudControllerFqcn, string $entityFqcn): self
+    {
+        return new self(\sprintf(
+            'Export row column count mismatch after BeforeExportRowEvent: expected %d columns, got %d columns for export class "%s" and entity "%s".',
+            $expectedCount,
+            $actualCount,
+            $crudControllerFqcn,
+            $entityFqcn,
+        ));
+    }
 }

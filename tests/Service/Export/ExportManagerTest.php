@@ -17,12 +17,15 @@ use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportCountResolverInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExporterInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportFieldsProviderInterface;
+use JorisDugue\EasyAdminExtraBundle\Contract\ExportSetMetadataProviderInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
+use JorisDugue\EasyAdminExtraBundle\Dto\ExportSetMetadata;
 use JorisDugue\EasyAdminExtraBundle\Event\Export\AfterExportEvent;
 use JorisDugue\EasyAdminExtraBundle\Event\Export\BeforeExportEvent;
 use JorisDugue\EasyAdminExtraBundle\Event\Export\BeforeExportRowEvent;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidMappedExportRowException;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
@@ -58,6 +61,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Throwable;
 use UnitEnum;
 
 final class ExportManagerTest extends TestCase
@@ -172,6 +176,59 @@ final class ExportManagerTest extends TestCase
         self::assertStringNotContainsString('alice@example.com', $content);
     }
 
+    public function testBeforeExportRowEventCannotChangeColumnCount(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new ExportManagerEntity('Alice')]);
+        ExportManagerCrudController::$queryBuilder = $queryBuilder;
+
+        $eventDispatcher = new EventDispatcher();
+        $eventDispatcher->addListener(BeforeExportRowEvent::class, static function (BeforeExportRowEvent $event): void {
+            $row = $event->getRow();
+            $row[] = 'unexpected';
+            $event->setRow($row);
+        });
+
+        $manager = $this->createManager(new CsvExporter(new SpreadsheetCellSanitizerService()), $entityManager, $eventDispatcher);
+
+        $request = new Request();
+        $request->attributes->set(EA::CRUD_ACTION, 'index');
+
+        $response = $manager->export(ExportManagerCrudController::class, ExportFormat::CSV, $request);
+
+        self::assertInstanceOf(StreamedResponse::class, $response);
+
+        $this->expectException(InvalidMappedExportRowException::class);
+        $this->expectExceptionMessage('expected 1 columns, got 2 columns');
+        $this->expectExceptionMessage(ExportManagerCrudController::class);
+        $this->expectExceptionMessage(ExportManagerEntity::class);
+
+        $this->getStreamedResponseContent($response);
+    }
+
+    public function testPreviewUsesRequestedExportSetConfig(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new ExportSetManagerEntity('Alice', 'alice@example.com')]);
+        ExportSetManagerCrudController::$queryBuilder = $queryBuilder;
+
+        $manager = $this->createManager(
+            new CapturingExporter(ExportFormat::CSV),
+            $entityManager,
+            null,
+            new ExportSetManagerCrudController(),
+        );
+
+        $request = new Request(['exportSet' => 'gdpr']);
+        $request->attributes->set(EA::CRUD_ACTION, 'index');
+
+        $preview = $manager->preview(ExportSetManagerCrudController::class, ExportFormat::CSV, $request);
+
+        self::assertSame(['Email'], $preview->headers);
+        self::assertSame([['alice@example.com']], $preview->rows);
+        self::assertSame('Export CSV', $preview->formatLabels[ExportFormat::CSV]);
+    }
+
     public function testHiddenVisibleFormatAndRoleBehaviorRemainUnchangedWithEvents(): void
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
@@ -214,16 +271,16 @@ final class ExportManagerTest extends TestCase
         $manager->exportBatch(ExportManagerCrudController::class, ExportFormat::JSON, ['42'], new Request());
     }
 
-    private function createManager(ExporterInterface $exporter, EntityManagerInterface $entityManager, ?EventDispatcherInterface $eventDispatcher = null): ExportManager
+    private function createManager(ExporterInterface $exporter, EntityManagerInterface $entityManager, ?EventDispatcherInterface $eventDispatcher = null, ?object $crudController = null): ExportManager
     {
-        $crudController = new ExportManagerCrudController();
+        $crudController ??= new ExportManagerCrudController();
 
         $container = new class($crudController) implements ContainerInterface {
-            public function __construct(private readonly ExportManagerCrudController $crudController) {}
+            public function __construct(private readonly object $crudController) {}
 
             public function get(string $id, int $invalidBehavior = self::EXCEPTION_ON_INVALID_REFERENCE): ?object
             {
-                if (ExportManagerCrudController::class === $id) {
+                if ($this->crudController::class === $id) {
                     return $this->crudController;
                 }
 
@@ -232,7 +289,7 @@ final class ExportManagerTest extends TestCase
 
             public function has(string $id): bool
             {
-                return ExportManagerCrudController::class === $id;
+                return $this->crudController::class === $id;
             }
 
             public function initialized(string $id): bool
@@ -333,9 +390,16 @@ final class ExportManagerTest extends TestCase
         self::assertNotNull($callback);
 
         ob_start();
-        $callback();
 
-        return (string) ob_get_clean();
+        try {
+            $callback();
+
+            return (string) ob_get_clean();
+        } catch (Throwable $exception) {
+            ob_end_clean();
+
+            throw $exception;
+        }
     }
 
     /**
@@ -385,6 +449,47 @@ final class ExportManagerCrudController extends AbstractCrudController implement
 final readonly class ExportManagerEntity
 {
     public function __construct(public string $name) {}
+}
+
+#[AdminExport(
+    filename: 'users-{format}',
+    formats: [ExportFormat::CSV, ExportFormat::XML],
+    previewEnabled: true,
+)]
+final class ExportSetManagerCrudController extends AbstractCrudController implements ExportFieldsProviderInterface, ExportSetMetadataProviderInterface
+{
+    public static QueryBuilder $queryBuilder;
+
+    public static function getEntityFqcn(): string
+    {
+        return ExportSetManagerEntity::class;
+    }
+
+    public static function getExportFields(?string $exportSet = null): array
+    {
+        return match ($exportSet) {
+            'gdpr' => [TextExportField::new('email', 'Email')],
+            default => [TextExportField::new('name', 'Name')],
+        };
+    }
+
+    public static function getExportSetMetadata(): array
+    {
+        return [
+            new ExportSetMetadata('default', 'Default export'),
+            new ExportSetMetadata('gdpr', 'GDPR export'),
+        ];
+    }
+
+    public function createExportAllQueryBuilder(): QueryBuilder
+    {
+        return self::$queryBuilder;
+    }
+}
+
+final readonly class ExportSetManagerEntity
+{
+    public function __construct(public string $name, public string $email) {}
 }
 
 final class CapturingExporter implements ExporterInterface

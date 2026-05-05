@@ -130,6 +130,22 @@ final readonly class ExportManager
     }
 
     /**
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     *
+     * @throws ReflectionException
+     */
+    public function resolvePreviewConfig(string $crudControllerFqcn, Request $request): ExportConfig
+    {
+        [, $config] = $this->resolveAuthorizedCrudAndConfig($crudControllerFqcn, $request);
+
+        if (!$config->previewEnabled) {
+            throw new AccessDeniedException('Export preview is not enabled for this resource.');
+        }
+
+        return $config;
+    }
+
+    /**
      * Exports a manually selected set of entities identified by their IDs.
      *
      * This method is triggered by EasyAdmin batch actions. It receives the list
