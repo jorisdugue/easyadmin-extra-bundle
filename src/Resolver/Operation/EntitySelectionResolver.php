@@ -9,6 +9,9 @@ use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 
 final readonly class EntitySelectionResolver
 {
+    private const DECIMAL_IDENTIFIER_TYPES = ['integer', 'smallint', 'bigint'];
+    private const CASTABLE_INTEGER_IDENTIFIER_TYPES = ['integer', 'smallint'];
+
     /**
      * @param list<int|string> $ids
      */
@@ -28,10 +31,21 @@ final readonly class EntitySelectionResolver
      *
      * @return list<int|string>
      */
-    public function castIds(array $ids, string $identifierType): array
+    public function castIds(array $ids, string $identifierType, ?string $entityFqcn = null): array
     {
+        if (\in_array($identifierType, self::DECIMAL_IDENTIFIER_TYPES, true)) {
+            $invalidIds = array_values(array_filter(
+                $ids,
+                static fn (int|string $id): bool => 1 !== preg_match('/^[+-]?\d+$/', (string) $id),
+            ));
+
+            if ([] !== $invalidIds) {
+                throw InvalidBatchExportException::invalidIdentifierValues($entityFqcn ?? '[unknown]', $identifierType, $invalidIds);
+            }
+        }
+
         return array_values(array_map(
-            static fn (int|string $id): int|string => \in_array($identifierType, ['integer', 'smallint', 'bigint'], true)
+            static fn (int|string $id): int|string => \in_array($identifierType, self::CASTABLE_INTEGER_IDENTIFIER_TYPES, true)
                 ? (int) $id
                 : (string) $id,
             $ids,

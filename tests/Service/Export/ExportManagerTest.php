@@ -4,12 +4,24 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Tests\Service\Export;
 
+use ArrayIterator;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\FieldMapping;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
+use Doctrine\Persistence\ManagerRegistry;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
+use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
+use EasyCorp\Bundle\EasyAdminBundle\Context\CrudContext;
 use EasyCorp\Bundle\EasyAdminBundle\Contracts\Provider\AdminContextProviderInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\CrudDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\FilterConfigDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Factory\FilterFactory;
 use InvalidArgumentException;
 use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
@@ -271,6 +283,31 @@ final class ExportManagerTest extends TestCase
         $manager->exportBatch(ExportManagerCrudController::class, ExportFormat::JSON, ['42'], new Request());
     }
 
+    public function testBatchExportKeepsCurrentBehaviorForIdsFilteredOutByCrudQuery(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, []);
+        $queryBuilder->method('getRootAliases')->willReturn(['entity']);
+        $queryBuilder->expects(self::once())
+            ->method('andWhere')
+            ->with('entity.id IN (:selectedIds)')
+            ->willReturnSelf();
+        $queryBuilder->expects(self::once())
+            ->method('setParameter')
+            ->with('selectedIds', [42])
+            ->willReturnSelf();
+        ExportManagerCrudController::$queryBuilder = $queryBuilder;
+
+        $capturingExporter = new CapturingExporter(ExportFormat::XML);
+        $manager = $this->createManager($capturingExporter, $entityManager);
+        $request = $this->createBatchRequestWithIndexContext();
+
+        $response = $manager->exportBatch(ExportManagerCrudController::class, ExportFormat::XML, ['42'], $request);
+
+        self::assertSame('captured-xml', $response->getContent());
+        self::assertSame([], iterator_to_array($capturingExporter->lastPayload?->rows ?? new ArrayIterator()));
+    }
+
     private function createManager(ExporterInterface $exporter, EntityManagerInterface $entityManager, ?EventDispatcherInterface $eventDispatcher = null, ?object $crudController = null): ExportManager
     {
         $crudController ??= new ExportManagerCrudController();
@@ -348,6 +385,7 @@ final class ExportManagerTest extends TestCase
             new CollectionFactoryCompat(),
             new FilterFactory($this->createMock(AdminContextProviderInterface::class), []),
         );
+        $managerRegistry = $this->createManagerRegistry($entityManager);
 
         return new ExportManager(
             new CrudControllerResolver($container),
@@ -355,7 +393,7 @@ final class ExportManagerTest extends TestCase
             new ExportContextFactory(
                 new Security($securityContainer),
                 new OperationScopeResolver(new ActiveIndexContextResolver()),
-                new EntityMetadataResolver($entityManager),
+                new EntityMetadataResolver($managerRegistry),
                 new OperationContextFactory(),
             ),
             new ExportPayloadFactory(
@@ -372,7 +410,7 @@ final class ExportManagerTest extends TestCase
             ),
             new EntityQueryBuilderFactory(
                 $operationContextResolver,
-                new EntityMetadataResolver($entityManager),
+                new EntityMetadataResolver($managerRegistry),
                 new EntitySelectionResolver(),
             ),
             new ExportPreviewInspector(),
@@ -381,6 +419,43 @@ final class ExportManagerTest extends TestCase
             new RoleAuthorizationChecker($authorizationChecker),
             $eventDispatcher ?? new EventDispatcher(),
         );
+    }
+
+    private function createManagerRegistry(EntityManagerInterface $entityManager): ManagerRegistry
+    {
+        $metadata = $this->createMock(ClassMetadata::class);
+        $metadata->method('getIdentifierFieldNames')->willReturn(['id']);
+        $metadata->method('getFieldMapping')->with('id')->willReturn(new FieldMapping('integer', 'id', 'id'));
+        $entityManager->method('getClassMetadata')->with(ExportManagerEntity::class)->willReturn($metadata);
+
+        $managerRegistry = $this->createMock(ManagerRegistry::class);
+        $managerRegistry->method('getManagerForClass')->with(ExportManagerEntity::class)->willReturn($entityManager);
+
+        return $managerRegistry;
+    }
+
+    private function createBatchRequestWithIndexContext(): Request
+    {
+        $request = new Request();
+        $request->attributes->set(EA::CRUD_ACTION, 'index');
+
+        $crudDto = new CrudDto();
+        $crudDto->setControllerFqcn(ExportManagerCrudController::class);
+        $crudDto->setEntityFqcn(ExportManagerEntity::class);
+        $crudDto->setFiltersConfig(new FilterConfigDto());
+
+        $metadata = $this->createMock(ClassMetadata::class);
+        $entityDto = new EntityDto(ExportManagerEntity::class, $metadata);
+        $searchDto = new SearchDto($request, null, null, [], [], []);
+
+        $context = AdminContext::forTesting(crudContext: CrudContext::forTesting(
+            crudDto: $crudDto,
+            entityDto: $entityDto,
+            searchDto: $searchDto,
+        ));
+        $request->attributes->set(EA::CONTEXT_REQUEST_ATTRIBUTE, $context);
+
+        return $request;
     }
 
     private function getStreamedResponseContent(StreamedResponse $response): string
@@ -440,7 +515,17 @@ final class ExportManagerCrudController extends AbstractCrudController implement
         return [TextExportField::new('name', 'Name')];
     }
 
+    public function configureFields(string $pageName): iterable
+    {
+        return ['name'];
+    }
+
     public function createExportAllQueryBuilder(): QueryBuilder
+    {
+        return self::$queryBuilder;
+    }
+
+    public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
     {
         return self::$queryBuilder;
     }

@@ -81,11 +81,12 @@ final class AdminExportPreviewControllerTest extends TestCase
     public function testRequestedExportSetIsUsedForRenderedPreviewMetadata(): void
     {
         $entityManager = $this->createEntityManager();
+        $managerRegistry = $this->createManagerRegistry($entityManager);
         $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new PreviewControllerEntity('Alice', 'alice@example.com')]);
         PreviewControllerCrudController::$queryBuilder = $queryBuilder;
 
         $renderedParameters = [];
-        $controller = $this->createController($entityManager, true, $renderedParameters);
+        $controller = $this->createController($managerRegistry, true, $renderedParameters);
 
         $request = new Request(['exportSet' => 'gdpr', 'format' => ExportFormat::CSV]);
         $request->attributes->set('_jd_ea_extra_crud', PreviewControllerCrudController::class);
@@ -105,11 +106,12 @@ final class AdminExportPreviewControllerTest extends TestCase
     public function testUnauthorizedExportSetDoesNotRenderPreviewMetadata(): void
     {
         $entityManager = $this->createEntityManager();
+        $managerRegistry = $this->createManagerRegistry($entityManager);
         $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new PreviewControllerEntity('Alice', 'alice@example.com')], false);
         PreviewControllerCrudController::$queryBuilder = $queryBuilder;
 
         $renderedParameters = [];
-        $controller = $this->createController($entityManager, false, $renderedParameters);
+        $controller = $this->createController($managerRegistry, false, $renderedParameters);
 
         $request = new Request(['exportSet' => 'restricted', 'format' => ExportFormat::CSV]);
         $request->attributes->set('_jd_ea_extra_crud', PreviewControllerCrudController::class);
@@ -127,11 +129,12 @@ final class AdminExportPreviewControllerTest extends TestCase
     public function testUnsupportedPreviewFormatThrowsNotFound(): void
     {
         $entityManager = $this->createEntityManager();
+        $managerRegistry = $this->createManagerRegistry($entityManager);
         $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new PreviewControllerEntity('Alice', 'alice@example.com')], false);
         PreviewControllerCrudController::$queryBuilder = $queryBuilder;
 
         $renderedParameters = [];
-        $controller = $this->createController($entityManager, true, $renderedParameters);
+        $controller = $this->createController($managerRegistry, true, $renderedParameters);
 
         $request = new Request(['exportSet' => 'gdpr', 'format' => ExportFormat::JSON]);
         $request->attributes->set('_jd_ea_extra_crud', PreviewControllerCrudController::class);
@@ -150,11 +153,12 @@ final class AdminExportPreviewControllerTest extends TestCase
     public function testUnauthorizedExportSetWithUnsupportedFormatDoesNotExposeFormatMetadata(): void
     {
         $entityManager = $this->createEntityManager();
+        $managerRegistry = $this->createManagerRegistry($entityManager);
         $queryBuilder = $this->createConfiguredQueryBuilder($entityManager, [new PreviewControllerEntity('Alice', 'alice@example.com')], false);
         PreviewControllerCrudController::$queryBuilder = $queryBuilder;
 
         $renderedParameters = [];
-        $controller = $this->createController($entityManager, false, $renderedParameters);
+        $controller = $this->createController($managerRegistry, false, $renderedParameters);
 
         $request = new Request(['exportSet' => 'restricted', 'format' => ExportFormat::JSON]);
         $request->attributes->set('_jd_ea_extra_crud', PreviewControllerCrudController::class);
@@ -172,7 +176,7 @@ final class AdminExportPreviewControllerTest extends TestCase
     /**
      * @param array<string, mixed> $renderedParameters
      */
-    private function createController(EntityManagerInterface $entityManager, bool $isGranted, array &$renderedParameters): AdminExportPreviewController
+    private function createController(ManagerRegistry $managerRegistry, bool $isGranted, array &$renderedParameters): AdminExportPreviewController
     {
         $crudController = new PreviewControllerCrudController();
         $dashboardController = new PreviewControllerDashboardController();
@@ -181,7 +185,7 @@ final class AdminExportPreviewControllerTest extends TestCase
         $authorizationChecker->method('isGranted')->willReturn($isGranted);
         $eventDispatcher = new EventDispatcher();
 
-        $adminContextFactory = $this->createAdminContextFactory($entityManager, $authorizationChecker, $eventDispatcher);
+        $adminContextFactory = $this->createAdminContextFactory($managerRegistry, $authorizationChecker, $eventDispatcher);
         $operationAdminContextFactory = new OperationAdminContextFactory(
             $adminContextFactory,
             new CrudControllerResolver($serviceContainer),
@@ -190,7 +194,7 @@ final class AdminExportPreviewControllerTest extends TestCase
 
         $controller = new AdminExportPreviewController(
             new CrudActionNameResolver(),
-            $this->createExportManager($entityManager, $authorizationChecker, $eventDispatcher, $serviceContainer),
+            $this->createExportManager($managerRegistry, $authorizationChecker, $eventDispatcher, $serviceContainer),
             new ExportRouteMetadataResolver(),
             new OperationRequestMetadataResolver(),
             $operationAdminContextFactory,
@@ -227,7 +231,7 @@ final class AdminExportPreviewControllerTest extends TestCase
     }
 
     private function createAdminContextFactory(
-        EntityManagerInterface $entityManager,
+        ManagerRegistry $managerRegistry,
         AuthorizationCheckerInterface $authorizationChecker,
         EventDispatcherInterface $eventDispatcher,
     ): AdminContextFactory {
@@ -255,7 +259,7 @@ final class AdminExportPreviewControllerTest extends TestCase
             null,
             $menuFactory,
             $adminControllers,
-            new EntityFactory($authorizationChecker, $this->createManagerRegistry($entityManager), $eventDispatcher),
+            new EntityFactory($authorizationChecker, $managerRegistry, $eventDispatcher),
             $adminRouteGenerator,
             new ActionFactory(
                 $this->createMock(AdminContextProviderInterface::class),
@@ -268,7 +272,7 @@ final class AdminExportPreviewControllerTest extends TestCase
     }
 
     private function createExportManager(
-        EntityManagerInterface $entityManager,
+        ManagerRegistry $managerRegistry,
         AuthorizationCheckerInterface $authorizationChecker,
         EventDispatcherInterface $eventDispatcher,
         ContainerInterface $serviceContainer,
@@ -305,7 +309,7 @@ final class AdminExportPreviewControllerTest extends TestCase
             new ExportContextFactory(
                 new Security($securityContainer),
                 new OperationScopeResolver(new ActiveIndexContextResolver()),
-                new EntityMetadataResolver($entityManager),
+                new EntityMetadataResolver($managerRegistry),
                 new OperationContextFactory(),
             ),
             new ExportPayloadFactory(
@@ -322,7 +326,7 @@ final class AdminExportPreviewControllerTest extends TestCase
             ),
             new EntityQueryBuilderFactory(
                 $operationContextResolver,
-                new EntityMetadataResolver($entityManager),
+                new EntityMetadataResolver($managerRegistry),
                 new EntitySelectionResolver(),
             ),
             new ExportPreviewInspector(),
