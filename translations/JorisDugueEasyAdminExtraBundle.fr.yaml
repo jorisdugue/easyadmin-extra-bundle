@@ -14,6 +14,16 @@ easy_admin_extra:
       result:
         title: 'Prévisualisation'
         helper: 'Seules les premières lignes sont affichées.'
+      confirm:
+        title: 'Confirmer l''import'
+        helper: 'Le fichier CSV sera relu et validé à nouveau avant tout enregistrement.'
+        submit: 'Confirmer l''import'
+      import_result:
+        title: 'Résultat de l''import'
+        success: '%count% ligne(s) importée(s) avec succès.'
+        failure: 'Aucune ligne n''a été importée.'
+        row_error: 'Ligne %row% : %error%'
+        import_another: 'Importer un autre fichier CSV'
       form:
         title: 'Importer un fichier CSV'
         file: 'Fichier CSV'

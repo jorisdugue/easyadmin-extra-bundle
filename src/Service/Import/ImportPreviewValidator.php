@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Service\Import;
 
-use DateTimeImmutable;
+use DateTime;
 use DateTimeInterface;
 use JorisDugue\EasyAdminExtraBundle\Contract\ImportFieldInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportConfig;
@@ -26,7 +26,7 @@ final readonly class ImportPreviewValidator
      * @param list<list<string|null>>  $rows
      * @param list<ImportPreviewIssue> $issues
      *
-     * @return array{0: list<string>, 1: list<list<string|null>>}
+     * @return array{0: list<string>, 1: list<list<mixed>>}
      */
     public function validate(array $headers, array $rows, ImportConfig $config, bool $firstRowContainsHeaders, array &$issues): array
     {
@@ -49,7 +49,7 @@ final readonly class ImportPreviewValidator
      * @param list<list<string|null>>  $rows
      * @param list<ImportPreviewIssue> $issues
      *
-     * @return array{0: list<string>, 1: list<list<string|null>>}
+     * @return array{0: list<string>, 1: list<list<mixed>>}
      */
     private function validateRowsByHeader(array $headers, array $rows, ImportConfig $config, array &$issues): array
     {
@@ -95,7 +95,7 @@ final readonly class ImportPreviewValidator
      * @param list<list<string|null>>  $rows
      * @param list<ImportPreviewIssue> $issues
      *
-     * @return array{0: list<string>, 1: list<list<string|null>>}
+     * @return array{0: list<string>, 1: list<list<mixed>>}
      */
     private function validateRowsByPosition(array $sourceHeaders, array $rows, ImportConfig $config, bool $explicitPositionMode, array &$issues): array
     {
@@ -318,7 +318,7 @@ final readonly class ImportPreviewValidator
     /**
      * @param list<ImportPreviewIssue> $issues
      */
-    private function validateValue(ImportFieldInterface $field, mixed $value, int $rowNumber, string $header, array &$issues): ?string
+    private function validateValue(ImportFieldInterface $field, mixed $value, int $rowNumber, string $header, array &$issues): mixed
     {
         if ($this->isEmptyValue($value)) {
             if ($field->getAsDto()->isRequired()) {
@@ -371,13 +371,13 @@ final readonly class ImportPreviewValidator
     /**
      * @param list<ImportPreviewIssue> $issues
      */
-    private function validateDateValue(DateImportField $field, mixed $value, int $rowNumber, string $header, array &$issues): ?string
+    private function validateDateValue(DateImportField $field, mixed $value, int $rowNumber, string $header, array &$issues): ?DateTime
     {
         $format = $field->getAsDto()->getCustomOption(DateImportField::OPTION_FORMAT);
         $format = \is_string($format) && '' !== $format ? $format : 'Y-m-d';
 
         if ($value instanceof DateTimeInterface) {
-            return $value->format($format);
+            return DateTime::createFromInterface($value);
         }
 
         if (!\is_string($value)) {
@@ -386,12 +386,14 @@ final readonly class ImportPreviewValidator
             return null;
         }
 
-        $date = DateTimeImmutable::createFromFormat('!' . $format, $value);
-        if (!$date instanceof DateTimeImmutable || $date->format($format) !== $value) {
+        $date = DateTime::createFromFormat('!' . $format, $value);
+        if (!$date instanceof DateTime || $date->format($format) !== $value) {
             $issues[] = new ImportPreviewIssue(ImportPreviewIssue::ERROR, \sprintf('Row %d, field "%s": The date value is not valid.', $rowNumber, $header));
+
+            return null;
         }
 
-        return $value;
+        return $date;
     }
 
     private function isEmptyValue(mixed $value): bool

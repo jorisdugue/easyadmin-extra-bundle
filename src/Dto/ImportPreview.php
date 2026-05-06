@@ -8,7 +8,7 @@ final readonly class ImportPreview
 {
     /**
      * @param list<string>             $headers
-     * @param list<list<string|null>>  $rows
+     * @param list<list<mixed>>        $rows
      * @param list<ImportPreviewIssue> $issues
      */
     public function __construct(

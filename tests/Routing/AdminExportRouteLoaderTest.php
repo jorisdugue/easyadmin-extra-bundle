@@ -402,10 +402,13 @@ final class AdminExportRouteLoaderTest extends TestCase
 
         $routes = $loader->load(null, AdminExportRouteLoader::ROUTE_LOADER_TYPE);
 
-        self::assertCount(1, $routes);
+        self::assertCount(2, $routes);
         self::assertNull($routes->get('admin_product_export_csv'));
         self::assertNotNull($routes->get('admin_product_import_preview'));
+        self::assertNotNull($routes->get('admin_product_import_confirm'));
         self::assertSame('/admin/product/import/preview', $routes->get('admin_product_import_preview')?->getPath());
+        self::assertSame('/admin/product/import/confirm', $routes->get('admin_product_import_confirm')?->getPath());
+        self::assertSame(['POST'], $routes->get('admin_product_import_confirm')?->getMethods());
     }
 
     public function testLoadBuildsExportAndImportRoutesWhenBothAttributesArePresent(): void
@@ -423,11 +426,13 @@ final class AdminExportRouteLoaderTest extends TestCase
 
         $routes = $loader->load(null, AdminExportRouteLoader::ROUTE_LOADER_TYPE);
 
-        self::assertCount(2, $routes);
+        self::assertCount(3, $routes);
         self::assertNotNull($routes->get('admin_product_export_csv'));
         self::assertNotNull($routes->get('admin_product_import_preview'));
+        self::assertNotNull($routes->get('admin_product_import_confirm'));
         self::assertSame('/admin/product/export/csv', $routes->get('admin_product_export_csv')?->getPath());
         self::assertSame('/admin/product/import/preview', $routes->get('admin_product_import_preview')?->getPath());
+        self::assertSame('/admin/product/import/confirm', $routes->get('admin_product_import_confirm')?->getPath());
     }
 
     public function testLoadBuildsNoExtraRoutesWhenNoOperationAttributeIsPresent(): void

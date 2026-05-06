@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use JorisDugue\EasyAdminExtraBundle\Contract\ExportCountResolverInterface;
-use JorisDugue\EasyAdminExtraBundle\Controller\AdminImportPreviewController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportBatchController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportPreviewController;
+use JorisDugue\EasyAdminExtraBundle\Controller\AdminImportConfirmController;
+use JorisDugue\EasyAdminExtraBundle\Controller\AdminImportPreviewController;
 use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ExportActionExtension;
 use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ImportActionExtension;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
@@ -47,7 +48,12 @@ use JorisDugue\EasyAdminExtraBundle\Routing\AdminOperationRouteLoader;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExporterRegistry;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\CsvPreviewReader;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\CsvUploadValidator;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportEntityHydrator;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportManager;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportPersister;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportPreviewValidator;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\TemporaryImportStorage;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
 use JorisDugue\EasyAdminExtraBundle\Service\SpreadsheetCellSanitizerService;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
@@ -93,7 +99,12 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$exporters', tagged_iterator('joris_dugue_easyadmin_extra.exporter'));
 
     $services->set(CollectionFactoryCompat::class);
+    $services->set(CsvUploadValidator::class);
     $services->set(CsvPreviewReader::class);
+    $services->set(TemporaryImportStorage::class);
+    $services->set(ImportEntityHydrator::class);
+    $services->set(ImportPersister::class);
+    $services->set(ImportManager::class);
     $services->set(ImportFieldHeaderResolver::class);
     $services->set(ImportPreviewValidator::class);
     $services->set(ExportManager::class);
@@ -123,6 +134,10 @@ return static function (ContainerConfigurator $container): void {
         ->tag('controller.service_arguments');
 
     $services->set(AdminImportPreviewController::class)
+        ->public()
+        ->tag('controller.service_arguments');
+
+    $services->set(AdminImportConfirmController::class)
         ->public()
         ->tag('controller.service_arguments');
 

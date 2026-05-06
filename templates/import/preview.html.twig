@@ -6,14 +6,60 @@
 {% endblock %}
 
 {% block main %}
-    <p class="text-muted mb-3">
-        {{ 'easy_admin_extra.import.preview.description'|trans }}
-    </p>
+    {% set import_succeeded = import_result is defined and import_result and import_result.success %}
 
-    <div class="alert alert-info mb-3">
-        {{ 'easy_admin_extra.import.preview.notice_no_persistence'|trans }}
-    </div>
+    {% if not import_succeeded %}
+        <p class="text-muted mb-3">
+            {{ 'easy_admin_extra.import.preview.description'|trans }}
+        </p>
 
+        <div class="alert alert-info mb-3">
+            {{ 'easy_admin_extra.import.preview.notice_no_persistence'|trans }}
+        </div>
+    {% endif %}
+
+    {% if import_result is defined and import_result %}
+        <section class="content-panel mb-3">
+            <div class="content-panel-header">
+                <h2 class="h5 mb-0">{{ 'easy_admin_extra.import.preview.import_result.title'|trans }}</h2>
+            </div>
+
+            <div class="content-panel-body">
+                {% if import_result.success %}
+                    <div class="alert alert-success mb-3">
+                        {{ 'easy_admin_extra.import.preview.import_result.success'|trans({'%count%': import_result.importedCount}) }}
+                    </div>
+                    {% if import_preview_route is defined and import_preview_route %}
+                        <a class="btn btn-primary" href="{{ path(import_preview_route) }}">{{ 'easy_admin_extra.import.preview.import_result.import_another'|trans }}</a>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <p class="mb-2">{{ 'easy_admin_extra.import.preview.import_result.failure'|trans }}</p>
+                        {% if import_result.errors %}
+                            <ul class="mb-0">
+                                {% for error in import_result.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% if import_result.rowResults %}
+                            <ul class="{% if import_result.errors %}mt-2 {% endif %}mb-0">
+                                {% for row_result in import_result.rowResults %}
+                                    {% if not row_result.success %}
+                                        {% for error in row_result.errors %}
+                                            <li>{{ 'easy_admin_extra.import.preview.import_result.row_error'|trans({'%row%': row_result.rowNumber, '%error%': error}) }}</li>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+
+    {% if not import_succeeded %}
     <section class="content-panel mb-3">
         <div class="content-panel-header">
             <h2 class="h5 mb-0">{{ 'easy_admin_extra.import.preview.form.title'|trans }}</h2>
@@ -166,7 +212,11 @@
                             <tr>
                                 {% for value in row %}
                                     <td class="text-nowrap" data-label="{{ preview.headers[loop.index0] ?? '' }}">
-                                        {{ value is null ? '' : value }}
+                                        {% if value.timestamp is defined %}
+                                            {{ value|date('Y-m-d H:i:s') }}
+                                        {% else %}
+                                            {{ value is null ? '' : value }}
+                                        {% endif %}
                                     </td>
                                 {% endfor %}
                             </tr>
@@ -176,5 +226,29 @@
                 </div>
             </div>
         </section>
+
+        {% if can_confirm_import is defined and can_confirm_import and import_token is defined and import_token and import_confirm_route is defined and import_confirm_route %}
+            <section class="content-panel mb-3">
+                <div class="content-panel-header">
+                    <h2 class="h5 mb-0">{{ 'easy_admin_extra.import.preview.confirm.title'|trans }}</h2>
+                </div>
+
+                <div class="content-panel-body">
+                    <p class="text-muted mb-3">{{ 'easy_admin_extra.import.preview.confirm.helper'|trans }}</p>
+                    <form method="post" action="{{ path(import_confirm_route) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token(confirm_csrf_token_id) }}">
+                        <input type="hidden" name="import_token" value="{{ import_token }}">
+                        <input type="hidden" name="separator" value="{{ selected_separator }}">
+                        <input type="hidden" name="encoding" value="{{ selected_encoding }}">
+                        <input type="hidden" name="first_row_contains_headers" value="{{ first_row_contains_headers ? '1' : '0' }}">
+
+                        <div class="d-flex justify-content-end">
+                            <button class="btn btn-primary" type="submit">{{ 'easy_admin_extra.import.preview.confirm.submit'|trans }}</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        {% endif %}
+    {% endif %}
     {% endif %}
 {% endblock %}

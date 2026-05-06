@@ -14,6 +14,16 @@ easy_admin_extra:
       result:
         title: 'Preview'
         helper: 'Only the first rows are displayed.'
+      confirm:
+        title: 'Confirm import'
+        helper: 'The CSV file will be re-read and validated again before any data is persisted.'
+        submit: 'Confirm import'
+      import_result:
+        title: 'Import result'
+        success: '%count% row(s) imported successfully.'
+        failure: 'No rows were imported.'
+        row_error: 'Row %row%: %error%'
+        import_another: 'Import another CSV file'
       form:
         title: 'Upload CSV file'
         file: 'CSV file'

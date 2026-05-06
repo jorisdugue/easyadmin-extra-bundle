@@ -232,6 +232,102 @@ class UserCrudController extends AbstractCrudController
 
 ---
 
+## 📥 CSV Import
+
+CSV import is opt-in per CRUD controller. A CRUD controller must use `#[AdminImport]`
+and implement `ImportFieldsProviderInterface`; the bundle does not infer import fields
+from EasyAdmin fields.
+
+```php
+use JorisDugue\EasyAdminExtraBundle\Attribute\AdminImport;
+use JorisDugue\EasyAdminExtraBundle\Contract\ImportFieldsProviderInterface;
+use JorisDugue\EasyAdminExtraBundle\Field\ChoiceImportField;
+use JorisDugue\EasyAdminExtraBundle\Field\DateImportField;
+use JorisDugue\EasyAdminExtraBundle\Field\IgnoredImportField;
+use JorisDugue\EasyAdminExtraBundle\Field\TextImportField;
+
+#[AdminImport]
+class UserCrudController extends AbstractCrudController implements ImportFieldsProviderInterface
+{
+    public static function getImportFields(?string $importSet = null): array
+    {
+        return [
+            IgnoredImportField::new('legacyId')->position(1),
+            TextImportField::new('email', 'Email')->position(2)->required(),
+            ChoiceImportField::new('status', 'Status')
+                ->setChoices(['active' => 'Active', 'disabled' => 'Disabled'])
+                ->position(3),
+            DateImportField::new('createdAt', 'Created at')
+                ->setFormat('Y-m-d H:i:s')
+                ->position(4),
+        ];
+    }
+}
+```
+
+### Mapping modes
+
+If no import field defines `position()`, CSV columns are mapped sequentially by
+configured field order:
+
+* field 1 -> CSV column 1
+* field 2 -> CSV column 2
+* field 3 -> CSV column 3
+
+If at least one importable field defines `position()`, explicit mapping mode is
+enabled. In that mode every importable field must define a 1-based CSV column
+position. Unmapped CSV columns are ignored implicitly; `IgnoredImportField` is
+optional and is useful to document intentionally skipped columns.
+
+When headers are enabled and no positions are configured, fields are matched by
+CSV header. When positions are configured, positions take precedence over header
+names.
+
+### Field options
+
+Import fields support:
+
+* `required()` / `optional()`
+* `position(1)` using 1-based CSV column indexes
+* `transformUsing(callable $transformer)`
+* `ChoiceImportField::setChoices()` where CSV values are validated against choice keys
+* `DateImportField::setFormat()` where valid date strings are normalized before hydration
+
+The import pipeline is:
+
+```text
+raw CSV value
+-> optional transformer
+-> field validation
+-> normalized value
+-> entity hydration
+-> Doctrine persistence
+```
+
+Transformers receive the raw CSV value and an import row context. Exceptions are
+caught and reported as row/field validation errors. A `DateImportField` without a
+custom transformer converts valid strings to `DateTime` before hydration; a custom
+transformer may return any `DateTimeInterface`.
+
+### Preview and confirm flow
+
+The import action opens a server-rendered CSV preview page. Uploaded files are
+validated with layered checks: Symfony upload validity, size, `.csv` extension,
+CSV/text MIME types, bounded content sniffing, and bounded CSV parsing.
+
+No data is persisted during preview. When preview has no blocking errors, the
+bundle stores the validated CSV in private temporary storage and renders a confirm
+button with an opaque token. On confirmation the file is re-read, its size and
+SHA-256 are checked, and the full validation pipeline runs again before hydration
+and persistence.
+
+Persistence is all-or-nothing. The bundle validates non-nullable Doctrine fields
+before flushing where practical, then persists in a Doctrine transaction with
+batch flush/clear. If persistence fails, user-facing messages stay safe and the
+original exception is logged for application diagnostics.
+
+---
+
 ## 🧾 `#[AdminExport]` options
 
 The `#[AdminExport]` attribute lets you configure the export behavior of a CRUD controller.

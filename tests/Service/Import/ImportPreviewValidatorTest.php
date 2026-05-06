@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Tests\Service\Import;
 
-use DateTimeImmutable;
+use DateTime;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportConfig;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportPreviewIssue;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidImportConfigurationException;
@@ -138,7 +138,8 @@ final class ImportPreviewValidatorTest extends TestCase
         );
 
         self::assertSame(['UUID', 'Type action', 'Language', 'Created at'], $headers);
-        self::assertSame([['abc-123', 'create', 'en', '2026-05-06']], $rows);
+        self::assertInstanceOf(DateTime::class, $rows[0][3]);
+        self::assertSame('2026-05-06', $rows[0][3]->format('Y-m-d'));
         self::assertSame([], $issues);
     }
 
@@ -311,7 +312,9 @@ final class ImportPreviewValidatorTest extends TestCase
             $issues,
         );
 
-        self::assertSame([['06/05/2026'], ['2026-05-06']], $rows);
+        self::assertInstanceOf(DateTime::class, $rows[0][0]);
+        self::assertSame('06/05/2026', $rows[0][0]->format('d/m/Y'));
+        self::assertNull($rows[1][0]);
         self::assertIssueMessagesContain($issues, 'Row 2, field "Published at": The date value is not valid.');
         self::assertCount(1, $issues);
     }
@@ -321,7 +324,7 @@ final class ImportPreviewValidatorTest extends TestCase
         $issues = [];
         $field = DateImportField::new('publishedAt', 'Published at')
             ->setFormat('Y-m-d')
-            ->transformUsing(static fn (?string $value): DateTimeImmutable => new DateTimeImmutable((string) $value));
+            ->transformUsing(static fn (?string $value): DateTime => new DateTime((string) $value));
 
         [, $rows] = $this->validator->validate(
             ['Published at'],
@@ -331,7 +334,8 @@ final class ImportPreviewValidatorTest extends TestCase
             $issues,
         );
 
-        self::assertSame([['2026-05-06']], $rows);
+        self::assertInstanceOf(DateTime::class, $rows[0][0]);
+        self::assertSame('2026-05-06', $rows[0][0]->format('Y-m-d'));
         self::assertSame([], $issues);
     }
 

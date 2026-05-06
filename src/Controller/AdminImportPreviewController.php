@@ -10,6 +10,7 @@ use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationAdminContextFacto
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationRequestMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\CsvPreviewReader;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\TemporaryImportStorage;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,6 +23,7 @@ final class AdminImportPreviewController extends AbstractController
 
     public function __construct(
         private readonly CsvPreviewReader $csvPreviewReader,
+        private readonly TemporaryImportStorage $temporaryImportStorage,
         private readonly ImportConfigFactory $importConfigFactory,
         private readonly CrudActionNameResolver $crudActionNameResolver,
         private readonly OperationRequestMetadataResolver $operationRequestMetadataResolver,
@@ -38,6 +40,7 @@ final class AdminImportPreviewController extends AbstractController
         $firstRowContainsHeaders = $request->request->getBoolean('first_row_contains_headers', false);
         $preview = $this->csvPreviewReader->createEmptyPreview();
         $importConfig = null;
+        $importToken = null;
 
         try {
             $importConfig = $this->importConfigFactory->create($metadata->crudControllerFqcn);
@@ -54,19 +57,37 @@ final class AdminImportPreviewController extends AbstractController
             }
 
             if (null !== $importConfig) {
+                $uploadedFile = $this->resolveUploadedFile($request);
                 $preview = $this->csvPreviewReader->preview(
-                    $this->resolveUploadedFile($request),
+                    $uploadedFile,
                     $selectedSeparator,
                     $selectedEncoding,
                     $firstRowContainsHeaders,
                     $importConfig,
                 );
+
+                if (null !== $uploadedFile && !$this->hasBlockingPreviewIssues($preview->issues)) {
+                    $temporaryFile = $this->temporaryImportStorage->store(
+                        $uploadedFile,
+                        $metadata->crudControllerFqcn,
+                        $selectedSeparator,
+                        $selectedEncoding,
+                        $firstRowContainsHeaders,
+                    );
+                    $importToken = $temporaryFile->token;
+                }
             }
         }
 
         return $this->render('@JorisDugueEasyAdminExtraBundle/import/preview.html.twig', [
             'csrf_token_id' => self::CSRF_TOKEN_ID,
+            'confirm_csrf_token_id' => 'jd_import_confirm',
             'preview' => $preview,
+            'import_token' => $importToken,
+            'can_confirm_import' => null !== $importToken,
+            'import_preview_route' => $this->normalizeString($request->attributes->get('_jd_ea_extra_import_preview_route'), ''),
+            'import_confirm_route' => $this->normalizeString($request->attributes->get('_jd_ea_extra_import_confirm_route'), ''),
+            'import_result' => null,
             'selected_separator' => $selectedSeparator,
             'selected_encoding' => $selectedEncoding,
             'first_row_contains_headers' => $firstRowContainsHeaders,
@@ -94,5 +115,19 @@ final class AdminImportPreviewController extends AbstractController
     private function normalizeString(mixed $value, string $default): string
     {
         return \is_string($value) && '' !== trim($value) ? trim($value) : $default;
+    }
+
+    /**
+     * @param list<\JorisDugue\EasyAdminExtraBundle\Dto\ImportPreviewIssue> $issues
+     */
+    private function hasBlockingPreviewIssues(array $issues): bool
+    {
+        foreach ($issues as $issue) {
+            if ($issue->isError()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

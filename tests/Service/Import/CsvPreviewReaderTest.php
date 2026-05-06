@@ -139,6 +139,44 @@ final class CsvPreviewReaderTest extends TestCase
         self::assertSame('The uploaded file type is not accepted as CSV.', $preview->issues[0]->message);
     }
 
+    public function testItRejectsPdfContentRenamedAsCsv(): void
+    {
+        $this->assertCsvContentRejected("%PDF-1.7\n1 0 obj\n", 'pdf.csv');
+    }
+
+    public function testItRejectsZipContentRenamedAsCsv(): void
+    {
+        $this->assertCsvContentRejected("PK\x03\x04binary zip data", 'archive.csv');
+    }
+
+    public function testItRejectsPhpContentRenamedAsCsv(): void
+    {
+        $this->assertCsvContentRejected("<?php echo 'not csv';\n", 'script.csv');
+    }
+
+    public function testItRejectsHtmlContentRenamedAsCsv(): void
+    {
+        $this->assertCsvContentRejected("<!doctype html>\n<html><body>not csv</body></html>\n", 'page.csv');
+    }
+
+    public function testItRejectsBinaryNullByteContentRenamedAsCsv(): void
+    {
+        $this->assertCsvContentRejected("Name,Email\nAlice\0,alice@example.com\n", 'binary.csv');
+    }
+
+    public function testItRejectsEmptyCsvFiles(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile('');
+
+        $preview = $reader->preview($file, 'comma', 'UTF-8', true);
+
+        self::assertFalse($preview->hasRows());
+        self::assertTrue($preview->hasIssues());
+        self::assertSame(ImportPreviewIssue::ERROR, $preview->issues[0]->severity);
+        self::assertSame('The CSV file is empty.', $preview->issues[0]->message);
+    }
+
     public function testItRejectsInvalidSeparator(): void
     {
         $reader = new CsvPreviewReader();
@@ -187,7 +225,7 @@ final class CsvPreviewReaderTest extends TestCase
         self::assertSame([['Alice', '<strong>Hello</strong>']], $preview->rows);
     }
 
-    public function testItLimitsPreviewRowsAndColumns(): void
+    public function testItLimitsPreviewRowsAndRejectsTooManyColumns(): void
     {
         $reader = new CsvPreviewReader();
         $headers = [];
@@ -208,11 +246,23 @@ final class CsvPreviewReaderTest extends TestCase
         $file = $this->createUploadedFile(implode("\n", $lines) . "\n");
         $preview = $reader->preview($file, 'comma', 'UTF-8', true);
 
-        self::assertCount(50, $preview->headers);
-        self::assertCount(20, $preview->rows);
-        self::assertCount(50, $preview->rows[0]);
+        self::assertFalse($preview->hasRows());
         self::assertTrue($preview->hasIssues());
-        self::assertContains('Only the first 50 columns are shown in the preview.', array_map(static fn (ImportPreviewIssue $issue): string => $issue->message, $preview->issues));
+        self::assertContains('The uploaded file is not a valid CSV file.', array_map(static fn (ImportPreviewIssue $issue): string => $issue->message, $preview->issues));
+    }
+
+    public function testItLimitsPreviewRows(): void
+    {
+        $reader = new CsvPreviewReader();
+        $lines = ['Name,Email'];
+        for ($row = 1; $row <= 25; ++$row) {
+            $lines[] = 'User ' . $row . ',user' . $row . '@example.com';
+        }
+
+        $file = $this->createUploadedFile(implode("\n", $lines) . "\n");
+        $preview = $reader->preview($file, 'comma', 'UTF-8', true);
+
+        self::assertCount(20, $preview->rows);
         self::assertContains('Only the first 20 rows are shown in the preview.', array_map(static fn (ImportPreviewIssue $issue): string => $issue->message, $preview->issues));
     }
 
@@ -228,12 +278,39 @@ final class CsvPreviewReaderTest extends TestCase
         self::assertSame('The CSV file must be 2 MB or smaller.', $preview->issues[0]->message);
     }
 
-    private function createUploadedFile(string $contents, string $clientName = 'users.csv', string $mimeType = 'text/csv'): UploadedFile
+    private function assertCsvContentRejected(string $contents, string $clientName): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile($contents, $clientName, 'text/plain', true);
+
+        $preview = $reader->preview($file, 'comma', 'UTF-8', true);
+
+        self::assertFalse($preview->hasRows());
+        self::assertTrue($preview->hasIssues());
+        self::assertContains(
+            'The uploaded file is not a valid CSV file.',
+            array_map(static fn (ImportPreviewIssue $issue): string => $issue->message, $preview->issues),
+        );
+    }
+
+    private function createUploadedFile(string $contents, string $clientName = 'users.csv', string $mimeType = 'text/csv', bool $forceMimeType = false): UploadedFile
     {
         $path = tempnam(sys_get_temp_dir(), 'jd_csv_preview_');
         self::assertIsString($path);
         file_put_contents($path, $contents);
 
+        if ($forceMimeType) {
+            return new ForcedMimeUploadedFile($path, $clientName, $mimeType, null, true);
+        }
+
         return new UploadedFile($path, $clientName, $mimeType, null, true);
+    }
+}
+
+final class ForcedMimeUploadedFile extends UploadedFile
+{
+    public function getMimeType(): ?string
+    {
+        return $this->getClientMimeType();
     }
 }

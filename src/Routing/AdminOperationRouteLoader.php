@@ -13,6 +13,7 @@ use JorisDugue\EasyAdminExtraBundle\Attribute\AdminExport;
 use JorisDugue\EasyAdminExtraBundle\Attribute\AdminImport;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportBatchController;
+use JorisDugue\EasyAdminExtraBundle\Controller\AdminImportConfirmController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminImportPreviewController;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
@@ -88,7 +89,7 @@ class AdminOperationRouteLoader extends Loader
                 }
 
                 if ($crud['importEnabled']) {
-                    $this->addImportPreviewRoute($routes, $generatedRouteNames, $generatedRoutePaths, $dashboard, $crud);
+                    $this->addImportRoutes($routes, $generatedRouteNames, $generatedRoutePaths, $dashboard, $crud);
                 }
             }
         }
@@ -267,7 +268,7 @@ class AdminOperationRouteLoader extends Loader
      * @param array<string, array{dashboard:string,crud:string}>                                                                                        $generatedRouteNames
      * @param array<string, array{dashboard:string,crud:string}>                                                                                        $generatedRoutePaths
      */
-    private function addImportPreviewRoute(
+    private function addImportRoutes(
         RouteCollection $routes,
         array &$generatedRouteNames,
         array &$generatedRoutePaths,
@@ -279,6 +280,8 @@ class AdminOperationRouteLoader extends Loader
 
         $importPreviewPath = $this->joinPaths($dashboard['path'], $crud['importPath'], '/import/preview');
         $importPreviewRouteName = \sprintf('%s_%s_import_preview', $dashboard['name'], $crud['importName']);
+        $importConfirmPath = $this->joinPaths($dashboard['path'], $crud['importPath'], '/import/confirm');
+        $importConfirmRouteName = \sprintf('%s_%s_import_confirm', $dashboard['name'], $crud['importName']);
         $this->guardDuplicateRoute($generatedRouteNames, $generatedRoutePaths, $importPreviewRouteName, $importPreviewPath, $dashboard['fqcn'], $crud['fqcn']);
 
         $routes->add($importPreviewRouteName, new Route(
@@ -290,12 +293,35 @@ class AdminOperationRouteLoader extends Loader
                 EA::CRUD_CONTROLLER_FQCN => $crud['fqcn'],
                 EA::DASHBOARD_CONTROLLER_FQCN => $dashboard['fqcn'],
                 EA::CRUD_ACTION => 'index',
+                '_jd_ea_extra_import_preview_route' => $importPreviewRouteName,
+                '_jd_ea_extra_import_confirm_route' => $importConfirmRouteName,
             ],
             [],
             [],
             '',
             [],
             ['GET', 'POST'],
+        ));
+
+        $this->guardDuplicateRoute($generatedRouteNames, $generatedRoutePaths, $importConfirmRouteName, $importConfirmPath, $dashboard['fqcn'], $crud['fqcn']);
+
+        $routes->add($importConfirmRouteName, new Route(
+            $importConfirmPath,
+            [
+                '_controller' => AdminImportConfirmController::class,
+                '_jd_ea_extra_crud' => $crud['fqcn'],
+                '_jd_ea_extra_dashboard' => $dashboard['fqcn'],
+                EA::CRUD_CONTROLLER_FQCN => $crud['fqcn'],
+                EA::DASHBOARD_CONTROLLER_FQCN => $dashboard['fqcn'],
+                EA::CRUD_ACTION => 'index',
+                '_jd_ea_extra_import_preview_route' => $importPreviewRouteName,
+                '_jd_ea_extra_import_confirm_route' => $importConfirmRouteName,
+            ],
+            [],
+            [],
+            '',
+            [],
+            ['POST'],
         ));
     }
 

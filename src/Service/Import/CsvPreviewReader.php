@@ -13,17 +13,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 final class CsvPreviewReader
 {
     private const FORMAT = 'CSV';
-    private const MAX_FILE_SIZE_BYTES = 2_097_152;
     private const MAX_PREVIEW_ROWS = 20;
-    private const MAX_PREVIEW_COLUMNS = 50;
-    private const ALLOWED_EXTENSIONS = ['csv'];
-    private const ALLOWED_MIME_TYPES = [
-        'application/csv',
-        'application/vnd.ms-excel',
-        'text/csv',
-        'text/plain',
-        'text/x-csv',
-    ];
     private const ALLOWED_ENCODINGS = [
         'UTF-8',
         'ISO-8859-1',
@@ -35,7 +25,10 @@ final class CsvPreviewReader
         'tab' => "\t",
     ];
 
-    public function __construct(private ?ImportPreviewValidator $importPreviewValidator = null) {}
+    public function __construct(
+        private ?ImportPreviewValidator $importPreviewValidator = null,
+        private ?CsvUploadValidator $csvUploadValidator = null,
+    ) {}
 
     public function createEmptyPreview(): ImportPreview
     {
@@ -65,7 +58,7 @@ final class CsvPreviewReader
         $filename = $this->sanitizeFilename($file->getClientOriginalName());
         $encoding = $this->resolveEncoding($encoding, $issues);
 
-        $this->validateUpload($file, $issues);
+        $this->getCsvUploadValidator()->validateUpload($file, $issues);
         if ($this->hasErrors($issues)) {
             return new ImportPreview($filename, self::FORMAT, null, [], [], $issues);
         }
@@ -77,6 +70,11 @@ final class CsvPreviewReader
         $separator = $this->resolveSeparator($file, $separatorOption, $issues);
         if (null === $separator) {
             return new ImportPreview($filename, self::FORMAT, null, [], [], $issues);
+        }
+
+        $this->getCsvUploadValidator()->validateContent($file, $encoding, $separator, $issues);
+        if ($this->hasErrors($issues)) {
+            return new ImportPreview($filename, self::FORMAT, null, [], [], $this->uniqueIssues($issues));
         }
 
         $handle = @fopen($file->getPathname(), 'r');
@@ -129,31 +127,9 @@ final class CsvPreviewReader
         return $this->importPreviewValidator ??= new ImportPreviewValidator(new ImportFieldHeaderResolver());
     }
 
-    /**
-     * @param list<ImportPreviewIssue> $issues
-     */
-    private function validateUpload(UploadedFile $file, array &$issues): void
+    private function getCsvUploadValidator(): CsvUploadValidator
     {
-        if (!$file->isValid()) {
-            $issues[] = new ImportPreviewIssue(ImportPreviewIssue::ERROR, 'The uploaded file is not valid.');
-
-            return;
-        }
-
-        $extension = strtolower($file->getClientOriginalExtension());
-        if (!\in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
-            $issues[] = new ImportPreviewIssue(ImportPreviewIssue::ERROR, 'Only CSV files are accepted.');
-        }
-
-        $mimeType = $file->getMimeType();
-        if (!\is_string($mimeType) || !\in_array($mimeType, self::ALLOWED_MIME_TYPES, true)) {
-            $issues[] = new ImportPreviewIssue(ImportPreviewIssue::ERROR, 'The uploaded file type is not accepted as CSV.');
-        }
-
-        $size = $file->getSize();
-        if (null === $size || $size > self::MAX_FILE_SIZE_BYTES) {
-            $issues[] = new ImportPreviewIssue(ImportPreviewIssue::ERROR, \sprintf('The CSV file must be %s MB or smaller.', (string) (self::MAX_FILE_SIZE_BYTES / 1_048_576)));
-        }
+        return $this->csvUploadValidator ??= new CsvUploadValidator();
     }
 
     /**
@@ -210,13 +186,13 @@ final class CsvPreviewReader
      */
     private function limitColumns(array $row, array &$issues): array
     {
-        if (\count($row) <= self::MAX_PREVIEW_COLUMNS) {
+        if (\count($row) <= CsvUploadValidator::MAX_COLUMNS) {
             return $row;
         }
 
-        $issues[] = new ImportPreviewIssue(ImportPreviewIssue::WARNING, \sprintf('Only the first %d columns are shown in the preview.', self::MAX_PREVIEW_COLUMNS));
+        $issues[] = new ImportPreviewIssue(ImportPreviewIssue::WARNING, \sprintf('Only the first %d columns are shown in the preview.', CsvUploadValidator::MAX_COLUMNS));
 
-        return \array_slice($row, 0, self::MAX_PREVIEW_COLUMNS);
+        return \array_slice($row, 0, CsvUploadValidator::MAX_COLUMNS);
     }
 
     /**
@@ -264,7 +240,7 @@ final class CsvPreviewReader
      */
     private function buildDefaultHeaders(int $count): array
     {
-        $count = min($count, self::MAX_PREVIEW_COLUMNS);
+        $count = min($count, CsvUploadValidator::MAX_COLUMNS);
         $headers = [];
 
         for ($i = 1; $i <= $count; ++$i) {
