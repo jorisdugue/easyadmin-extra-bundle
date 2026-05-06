@@ -8,7 +8,10 @@ use JorisDugue\EasyAdminExtraBundle\Contract\ExportCountResolverInterface;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportBatchController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportPreviewController;
+use JorisDugue\EasyAdminExtraBundle\Controller\AdminImportConfirmController;
+use JorisDugue\EasyAdminExtraBundle\Controller\AdminImportPreviewController;
 use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ExportActionExtension;
+use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ImportActionExtension;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\XlsxExporter;
@@ -16,6 +19,7 @@ use JorisDugue\EasyAdminExtraBundle\Exporter\XmlExporter;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
+use JorisDugue\EasyAdminExtraBundle\Factory\ImportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\EntityQueryBuilderFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationAdminContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationContextFactory;
@@ -30,6 +34,8 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\ImportFieldHeaderResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\ImportRouteMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\ActiveIndexContextResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\BatchExportRequestValidator;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntityMetadataResolver;
@@ -38,8 +44,16 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationContextResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationRequestMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationScopeResolver;
 use JorisDugue\EasyAdminExtraBundle\Routing\AdminExportRouteLoader;
+use JorisDugue\EasyAdminExtraBundle\Routing\AdminOperationRouteLoader;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExporterRegistry;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\CsvPreviewReader;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\CsvUploadValidator;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportEntityHydrator;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportManager;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportPersister;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportPreviewValidator;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\TemporaryImportStorage;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
 use JorisDugue\EasyAdminExtraBundle\Service\SpreadsheetCellSanitizerService;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
@@ -53,6 +67,7 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(ExportConfigFactory::class)
         ->arg('$defaultActionDisplay', param('joris_dugue_easyadmin_extra.export.action_display'));
+    $services->set(ImportConfigFactory::class);
     $services->set(OperationRequestMetadataResolver::class);
     $services->set(OperationAdminContextFactory::class);
     $services->set(PropertyValueReader::class);
@@ -84,6 +99,14 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$exporters', tagged_iterator('joris_dugue_easyadmin_extra.exporter'));
 
     $services->set(CollectionFactoryCompat::class);
+    $services->set(CsvUploadValidator::class);
+    $services->set(CsvPreviewReader::class);
+    $services->set(TemporaryImportStorage::class);
+    $services->set(ImportEntityHydrator::class);
+    $services->set(ImportPersister::class);
+    $services->set(ImportManager::class);
+    $services->set(ImportFieldHeaderResolver::class);
+    $services->set(ImportPreviewValidator::class);
     $services->set(ExportManager::class);
     $services->set(ExportFieldValueResolver::class);
     $services->set(ExportRequestResolver::class);
@@ -100,6 +123,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(EntitySelectionResolver::class);
     $services->set(SpreadsheetCellSanitizerService::class);
     $services->set(ExportRouteMetadataResolver::class);
+    $services->set(ImportRouteMetadataResolver::class);
 
     $services->set(AdminExportController::class)
         ->public()
@@ -109,15 +133,33 @@ return static function (ContainerConfigurator $container): void {
         ->public()
         ->tag('controller.service_arguments');
 
-    $services->set(AdminExportRouteLoader::class)
+    $services->set(AdminImportPreviewController::class)
+        ->public()
+        ->tag('controller.service_arguments');
+
+    $services->set(AdminImportConfirmController::class)
+        ->public()
+        ->tag('controller.service_arguments');
+
+    $services->set(AdminOperationRouteLoader::class)
         ->args([
             param('joris_dugue_easyadmin_extra.discovery_paths'),
             service(ExportConfigFactory::class),
             service(ExportRouteMetadataResolver::class),
         ])
         ->tag('routing.loader');
+
+    $services->set(AdminExportRouteLoader::class)
+        ->args([
+            param('joris_dugue_easyadmin_extra.discovery_paths'),
+            service(ExportConfigFactory::class),
+            service(ExportRouteMetadataResolver::class),
+        ]);
     $services->set(ExportCountResolver::class);
     $services->alias(ExportCountResolverInterface::class, ExportCountResolver::class);
     $services->set(ExportActionExtension::class)
+        ->tag('ea.action_extension');
+
+    $services->set(ImportActionExtension::class)
         ->tag('ea.action_extension');
 };

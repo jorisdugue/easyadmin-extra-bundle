@@ -1,0 +1,254 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% trans_default_domain 'JorisDugueEasyAdminExtraBundle' %}
+
+{% block content_title %}
+    {{ 'easy_admin_extra.import.preview.title'|trans }}
+{% endblock %}
+
+{% block main %}
+    {% set import_succeeded = import_result is defined and import_result and import_result.success %}
+
+    {% if not import_succeeded %}
+        <p class="text-muted mb-3">
+            {{ 'easy_admin_extra.import.preview.description'|trans }}
+        </p>
+
+        <div class="alert alert-info mb-3">
+            {{ 'easy_admin_extra.import.preview.notice_no_persistence'|trans }}
+        </div>
+    {% endif %}
+
+    {% if import_result is defined and import_result %}
+        <section class="content-panel mb-3">
+            <div class="content-panel-header">
+                <h2 class="h5 mb-0">{{ 'easy_admin_extra.import.preview.import_result.title'|trans }}</h2>
+            </div>
+
+            <div class="content-panel-body">
+                {% if import_result.success %}
+                    <div class="alert alert-success mb-3">
+                        {{ 'easy_admin_extra.import.preview.import_result.success'|trans({'%count%': import_result.importedCount}) }}
+                    </div>
+                    {% if import_preview_route is defined and import_preview_route %}
+                        <a class="btn btn-primary" href="{{ path(import_preview_route) }}">{{ 'easy_admin_extra.import.preview.import_result.import_another'|trans }}</a>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <p class="mb-2">{{ 'easy_admin_extra.import.preview.import_result.failure'|trans }}</p>
+                        {% if import_result.errors %}
+                            <ul class="mb-0">
+                                {% for error in import_result.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% if import_result.rowResults %}
+                            <ul class="{% if import_result.errors %}mt-2 {% endif %}mb-0">
+                                {% for row_result in import_result.rowResults %}
+                                    {% if not row_result.success %}
+                                        {% for error in row_result.errors %}
+                                            <li>{{ 'easy_admin_extra.import.preview.import_result.row_error'|trans({'%row%': row_result.rowNumber, '%error%': error}) }}</li>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+
+    {% if not import_succeeded %}
+    <section class="content-panel mb-3">
+        <div class="content-panel-header">
+            <h2 class="h5 mb-0">{{ 'easy_admin_extra.import.preview.form.title'|trans }}</h2>
+        </div>
+
+        <div class="content-panel-body">
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="_token" value="{{ csrf_token(csrf_token_id) }}">
+
+                <div class="row align-items-end gx-3">
+                    <div class="col-12 col-xl-6 mb-3">
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="csv_file">{{ 'easy_admin_extra.import.preview.form.file'|trans }}</label>
+                            <input
+                                    class="form-control"
+                                    id="csv_file"
+                                    name="csv_file"
+                                    type="file"
+                                    accept=".csv,text/csv"
+                                    required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-lg-3 col-xl-2 mb-3">
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="separator">{{ 'easy_admin_extra.import.preview.form.separator'|trans }}</label>
+                            <select class="form-select" id="separator" name="separator">
+                                {% for value, label in separator_options %}
+                                    <option value="{{ value }}" {% if value == selected_separator %}selected{% endif %}>{{ ('easy_admin_extra.import.preview.separator.' ~ value)|trans }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-lg-3 col-xl-2 mb-3">
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="encoding">{{ 'easy_admin_extra.import.preview.form.encoding'|trans }}</label>
+                            <select class="form-select" id="encoding" name="encoding">
+                                {% for encoding in encoding_options %}
+                                    <option value="{{ encoding }}" {% if encoding == selected_encoding %}selected{% endif %}>{{ encoding }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xl-2 mb-3">
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="first_row_contains_headers">{{ 'easy_admin_extra.import.preview.form.headers'|trans }}</label>
+                            <div class="form-check">
+                                <input
+                                        class="form-check-input"
+                                        id="first_row_contains_headers"
+                                        name="first_row_contains_headers"
+                                        type="checkbox"
+                                        value="1"
+                                        {% if first_row_contains_headers %}checked{% endif %}
+                                >
+                                <label class="form-check-label" for="first_row_contains_headers">{{ 'easy_admin_extra.import.preview.form.first_row_contains_headers'|trans }}</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-1">
+                    <button class="btn btn-primary" type="submit">{{ 'easy_admin_extra.import.preview.form.submit'|trans }}</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    {% if preview.hasIssues %}
+        <section class="content-panel mb-3">
+            <div class="content-panel-header">
+                <h2 class="h5 mb-0">{{ 'easy_admin_extra.import.preview.validation_summary'|trans }}</h2>
+            </div>
+
+            <div class="content-panel-body">
+                <div class="alert alert-warning mb-0">
+                    <ul class="mb-0">
+                    {% for issue in preview.issues %}
+                        <li>
+                            {{ issue.message }}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+    {% if preview.hasRows %}
+        <section class="content-panel mb-3">
+            <div class="content-panel-header">
+                <h2 class="h5 mb-0">{{ 'easy_admin_extra.import.preview.metadata.title'|trans }}</h2>
+            </div>
+
+            <div class="content-panel-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <div class="p-2 h-100">
+                            <div class="text-muted small mb-1">{{ 'easy_admin_extra.import.preview.metadata.filename'|trans }}</div>
+                            <div class="fw-semibold text-truncate" title="{{ preview.filename }}">{{ preview.filename }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <div class="p-2 h-100">
+                            <div class="text-muted small mb-1">{{ 'easy_admin_extra.import.preview.metadata.format'|trans }}</div>
+                            <div class="fw-semibold">{{ preview.format }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <div class="p-2 h-100">
+                            <div class="text-muted small mb-1">{{ 'easy_admin_extra.import.preview.metadata.detected_row_count'|trans }}</div>
+                            <div class="fw-semibold">
+                            {% if preview.detectedRowCount is null %}
+                                {{ 'easy_admin_extra.import.preview.metadata.row_count_not_calculated'|trans }}
+                            {% else %}
+                                {{ preview.detectedRowCount }}
+                            {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="content-panel mb-3">
+            <div class="content-panel-header">
+                <h2 class="h5 mb-1">{{ 'easy_admin_extra.import.preview.result.title'|trans }}</h2>
+                <p class="text-muted mb-0">{{ 'easy_admin_extra.import.preview.result.helper'|trans }}</p>
+            </div>
+
+            <div class="content-panel-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead>
+                        <tr>
+                            {% for header in preview.headers %}
+                                <th class="text-nowrap" scope="col">
+                                    <span>{{ header }}</span>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in preview.rows %}
+                            <tr>
+                                {% for value in row %}
+                                    <td class="text-nowrap" data-label="{{ preview.headers[loop.index0] ?? '' }}">
+                                        {% if value.timestamp is defined %}
+                                            {{ value|date('Y-m-d H:i:s') }}
+                                        {% else %}
+                                            {{ value is null ? '' : value }}
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        {% if can_confirm_import is defined and can_confirm_import and import_token is defined and import_token and import_confirm_route is defined and import_confirm_route %}
+            <section class="content-panel mb-3">
+                <div class="content-panel-header">
+                    <h2 class="h5 mb-0">{{ 'easy_admin_extra.import.preview.confirm.title'|trans }}</h2>
+                </div>
+
+                <div class="content-panel-body">
+                    <p class="text-muted mb-3">{{ 'easy_admin_extra.import.preview.confirm.helper'|trans }}</p>
+                    <form method="post" action="{{ path(import_confirm_route) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token(confirm_csrf_token_id) }}">
+                        <input type="hidden" name="import_token" value="{{ import_token }}">
+                        <input type="hidden" name="separator" value="{{ selected_separator }}">
+                        <input type="hidden" name="encoding" value="{{ selected_encoding }}">
+                        <input type="hidden" name="first_row_contains_headers" value="{{ first_row_contains_headers ? '1' : '0' }}">
+
+                        <div class="d-flex justify-content-end">
+                            <button class="btn btn-primary" type="submit">{{ 'easy_admin_extra.import.preview.confirm.submit'|trans }}</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        {% endif %}
+    {% endif %}
+    {% endif %}
+{% endblock %}
