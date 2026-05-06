@@ -1,0 +1,138 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    Import preview
+{% endblock %}
+
+{% block main %}
+    <div class="content-panel">
+        <div class="content-panel-body">
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="_token" value="{{ csrf_token(csrf_token_id) }}">
+
+                <div class="row">
+                    <div class="col-12 col-lg-6 mb-3">
+                        <label class="form-label" for="csv_file">CSV file</label>
+                        <input
+                                class="form-control"
+                                id="csv_file"
+                                name="csv_file"
+                                type="file"
+                                accept=".csv,text/csv"
+                                required
+                        >
+                    </div>
+
+                    <div class="col-12 col-md-4 col-lg-2 mb-3">
+                        <label class="form-label" for="separator">Separator</label>
+                        <select class="form-select" id="separator" name="separator">
+                            {% for value, label in separator_options %}
+                                <option value="{{ value }}" {% if value == selected_separator %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-4 col-lg-2 mb-3">
+                        <label class="form-label" for="encoding">Encoding</label>
+                        <select class="form-select" id="encoding" name="encoding">
+                            {% for encoding in encoding_options %}
+                                <option value="{{ encoding }}" {% if encoding == selected_encoding %}selected{% endif %}>{{ encoding }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-4 col-lg-2 mb-3 d-flex align-items-end">
+                        <div class="form-check">
+                            <input
+                                    class="form-check-input"
+                                    id="first_row_contains_headers"
+                                    name="first_row_contains_headers"
+                                    type="checkbox"
+                                    value="1"
+                                    {% if first_row_contains_headers %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="first_row_contains_headers">First row contains headers</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" type="submit">Preview CSV</button>
+            </form>
+        </div>
+    </div>
+
+    {% if preview.hasIssues %}
+        <div class="content-panel">
+            <div class="content-panel-body">
+                <h2 class="h5">Validation summary</h2>
+                <ul class="mb-0">
+                    {% for issue in preview.issues %}
+                        <li class="{% if issue.error %}text-danger{% else %}text-warning{% endif %}">
+                            {{ issue.message }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if preview.hasRows %}
+        <div class="content-panel">
+            <div class="content-panel-body" style="background: transparent">
+                <div class="row">
+                    <div class="col-12 col-xl-8">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">Filename</dt>
+                            <dd class="col-sm-9">{{ preview.filename }}</dd>
+
+                            <dt class="col-sm-3">Format</dt>
+                            <dd class="col-sm-9">{{ preview.format }}</dd>
+
+                            <dt class="col-sm-3">Detected row count</dt>
+                            <dd class="col-sm-9">
+                                {% if preview.detectedRowCount is null %}
+                                    Not calculated during preview
+                                {% else %}
+                                    {{ preview.detectedRowCount }}
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info">
+            No data is persisted during preview.
+        </div>
+
+        <div class="content-panel">
+            <div class="content-panel-body p-0">
+                <div class="table-responsive">
+                    <table class="table datagrid mb-0">
+                        <thead>
+                        <tr>
+                            {% for header in preview.headers %}
+                                <th scope="col">
+                                    <span>{{ header }}</span>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in preview.rows %}
+                            <tr>
+                                {% for value in row %}
+                                    <td data-label="{{ preview.headers[loop.index0] ?? '' }}">
+                                        {{ value is null ? '' : value }}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
