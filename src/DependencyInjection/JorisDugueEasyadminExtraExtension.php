@@ -23,7 +23,6 @@ final class JorisDugueEasyadminExtraExtension extends Extension implements Prepe
             ]);
         }
 
-
         if ($container->hasExtension('framework')) {
             $container->prependExtensionConfig('framework', [
                 'translator' => [
@@ -33,7 +32,6 @@ final class JorisDugueEasyadminExtraExtension extends Extension implements Prepe
                 ],
             ]);
         }
-    
     }
 
     /**

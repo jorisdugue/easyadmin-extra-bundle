@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Service\Import;
 
+use JorisDugue\EasyAdminExtraBundle\Dto\ImportConfig;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportPreview;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportPreviewIssue;
+use JorisDugue\EasyAdminExtraBundle\Resolver\ImportFieldHeaderResolver;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 final class CsvPreviewReader
@@ -33,17 +35,31 @@ final class CsvPreviewReader
         'tab' => "\t",
     ];
 
+    public function __construct(private ?ImportPreviewValidator $importPreviewValidator = null) {}
+
     public function createEmptyPreview(): ImportPreview
     {
         return new ImportPreview(null, self::FORMAT, null, [], [], []);
     }
 
-    public function preview(?UploadedFile $file, string $separatorOption, string $encoding, bool $firstRowContainsHeaders): ImportPreview
+    public function createErrorPreview(string $message): ImportPreview
     {
+        return new ImportPreview(null, self::FORMAT, null, [], [], [
+            new ImportPreviewIssue(ImportPreviewIssue::ERROR, $message),
+        ]);
+    }
+
+    public function preview(
+        ?UploadedFile $file,
+        string $separatorOption,
+        string $encoding,
+        bool $firstRowContainsHeaders,
+        ?ImportConfig $importConfig = null,
+    ): ImportPreview {
         $issues = [];
 
         if (null === $file) {
-            return $this->errorPreview('Please choose a CSV file to preview.');
+            return $this->createErrorPreview('Please choose a CSV file to preview.');
         }
 
         $filename = $this->sanitizeFilename($file->getClientOriginalName());
@@ -101,14 +117,16 @@ final class CsvPreviewReader
             $issues[] = new ImportPreviewIssue(ImportPreviewIssue::WARNING, 'The CSV file does not contain any previewable rows.');
         }
 
+        if (null !== $importConfig && [] !== $headers) {
+            [$headers, $rows] = $this->getImportPreviewValidator()->validate($headers, $rows, $importConfig, $firstRowContainsHeaders, $issues);
+        }
+
         return new ImportPreview($filename, self::FORMAT, null, $headers, $rows, $this->uniqueIssues($issues));
     }
 
-    private function errorPreview(string $message): ImportPreview
+    private function getImportPreviewValidator(): ImportPreviewValidator
     {
-        return new ImportPreview(null, self::FORMAT, null, [], [], [
-            new ImportPreviewIssue(ImportPreviewIssue::ERROR, $message),
-        ]);
+        return $this->importPreviewValidator ??= new ImportPreviewValidator(new ImportFieldHeaderResolver());
     }
 
     /**

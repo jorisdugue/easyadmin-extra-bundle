@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Controller;
 
+use JorisDugue\EasyAdminExtraBundle\Exception\InvalidImportConfigurationException;
+use JorisDugue\EasyAdminExtraBundle\Factory\ImportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationAdminContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationRequestMetadataResolver;
@@ -12,6 +14,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 final class AdminImportPreviewController extends AbstractController
 {
@@ -19,6 +22,7 @@ final class AdminImportPreviewController extends AbstractController
 
     public function __construct(
         private readonly CsvPreviewReader $csvPreviewReader,
+        private readonly ImportConfigFactory $importConfigFactory,
         private readonly CrudActionNameResolver $crudActionNameResolver,
         private readonly OperationRequestMetadataResolver $operationRequestMetadataResolver,
         private readonly OperationAdminContextFactory $operationAdminContextFactory,
@@ -31,8 +35,17 @@ final class AdminImportPreviewController extends AbstractController
 
         $selectedSeparator = $this->normalizeString($request->request->get('separator'), 'auto');
         $selectedEncoding = $this->normalizeString($request->request->get('encoding'), 'UTF-8');
-        $firstRowContainsHeaders = $request->request->getBoolean('first_row_contains_headers', true);
+        $firstRowContainsHeaders = $request->request->getBoolean('first_row_contains_headers', false);
         $preview = $this->csvPreviewReader->createEmptyPreview();
+        $importConfig = null;
+
+        try {
+            $importConfig = $this->importConfigFactory->create($metadata->crudControllerFqcn);
+        } catch (InvalidImportConfigurationException $exception) {
+            $preview = $this->csvPreviewReader->createErrorPreview($exception->getMessage());
+        } catch (Throwable) {
+            $preview = $this->csvPreviewReader->createErrorPreview('The import fields could not be resolved. Please check the import configuration.');
+        }
 
         if ($request->isMethod('POST')) {
             $token = $this->normalizeString($request->request->get('_token'), '');
@@ -40,12 +53,15 @@ final class AdminImportPreviewController extends AbstractController
                 throw $this->createAccessDeniedException('The import preview request is not valid.');
             }
 
-            $preview = $this->csvPreviewReader->preview(
-                $this->resolveUploadedFile($request),
-                $selectedSeparator,
-                $selectedEncoding,
-                $firstRowContainsHeaders,
-            );
+            if (null !== $importConfig) {
+                $preview = $this->csvPreviewReader->preview(
+                    $this->resolveUploadedFile($request),
+                    $selectedSeparator,
+                    $selectedEncoding,
+                    $firstRowContainsHeaders,
+                    $importConfig,
+                );
+            }
         }
 
         return $this->render('@JorisDugueEasyAdminExtraBundle/import/preview.html.twig', [

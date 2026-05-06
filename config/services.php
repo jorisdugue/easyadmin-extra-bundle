@@ -18,6 +18,7 @@ use JorisDugue\EasyAdminExtraBundle\Exporter\XmlExporter;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\ExportPayloadFactory;
+use JorisDugue\EasyAdminExtraBundle\Factory\ImportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\EntityQueryBuilderFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationAdminContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationContextFactory;
@@ -32,6 +33,7 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\ImportFieldHeaderResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ImportRouteMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\ActiveIndexContextResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\BatchExportRequestValidator;
@@ -45,6 +47,7 @@ use JorisDugue\EasyAdminExtraBundle\Routing\AdminOperationRouteLoader;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExporterRegistry;
 use JorisDugue\EasyAdminExtraBundle\Service\Export\ExportManager;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\CsvPreviewReader;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportPreviewValidator;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
 use JorisDugue\EasyAdminExtraBundle\Service\SpreadsheetCellSanitizerService;
 use JorisDugue\EasyAdminExtraBundle\Support\CollectionFactoryCompat;
@@ -58,6 +61,7 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(ExportConfigFactory::class)
         ->arg('$defaultActionDisplay', param('joris_dugue_easyadmin_extra.export.action_display'));
+    $services->set(ImportConfigFactory::class);
     $services->set(OperationRequestMetadataResolver::class);
     $services->set(OperationAdminContextFactory::class);
     $services->set(PropertyValueReader::class);
@@ -90,6 +94,8 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(CollectionFactoryCompat::class);
     $services->set(CsvPreviewReader::class);
+    $services->set(ImportFieldHeaderResolver::class);
+    $services->set(ImportPreviewValidator::class);
     $services->set(ExportManager::class);
     $services->set(ExportFieldValueResolver::class);
     $services->set(ExportRequestResolver::class);

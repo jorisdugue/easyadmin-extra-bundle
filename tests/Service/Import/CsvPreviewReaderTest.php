@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Tests\Service\Import;
 
+use JorisDugue\EasyAdminExtraBundle\Dto\ImportConfig;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportPreviewIssue;
+use JorisDugue\EasyAdminExtraBundle\Field\TextImportField;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\CsvPreviewReader;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -22,6 +24,77 @@ final class CsvPreviewReaderTest extends TestCase
         self::assertSame('CSV', $preview->format);
         self::assertSame(['Name', 'Email'], $preview->headers);
         self::assertSame([['Alice', 'alice@example.com']], $preview->rows);
+        self::assertSame([], $preview->issues);
+    }
+
+    public function testItUsesFirstRowAsHeadersWithImportConfig(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile("Name,Email,Ignored\nAlice,alice@example.com,value\n");
+
+        $preview = $reader->preview(
+            $file,
+            'comma',
+            'UTF-8',
+            true,
+            new ImportConfig([
+                TextImportField::new('name', 'Name'),
+                TextImportField::new('email', 'Email'),
+            ]),
+        );
+
+        self::assertSame(['Name', 'Email'], $preview->headers);
+        self::assertSame([['Alice', 'alice@example.com']], $preview->rows);
+        self::assertContains('Unknown CSV column "Ignored" was ignored.', array_map(static fn (ImportPreviewIssue $issue): string => $issue->message, $preview->issues));
+    }
+
+    public function testItTreatsFirstRowAsDataWithImportConfigWhenHeadersAreDisabled(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile("id,uuid,typeAction\n1,abc,create\n");
+
+        $preview = $reader->preview(
+            $file,
+            'comma',
+            'UTF-8',
+            false,
+            new ImportConfig([
+                TextImportField::new('id', 'ID'),
+                TextImportField::new('uuid', 'UUID'),
+                TextImportField::new('typeAction', 'Type action'),
+            ]),
+        );
+
+        self::assertSame(['ID', 'UUID', 'Type action'], $preview->headers);
+        self::assertSame([
+            ['id', 'uuid', 'typeAction'],
+            ['1', 'abc', 'create'],
+        ], $preview->rows);
+        self::assertSame([], $preview->issues);
+    }
+
+    public function testItDoesNotCompareHeaderLookingFirstRowValuesWhenHeadersAreDisabled(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile("id,uuid,typeAction,lang\n1,abc,create,en\n");
+
+        $preview = $reader->preview(
+            $file,
+            'comma',
+            'UTF-8',
+            false,
+            new ImportConfig([
+                TextImportField::new('uuid', 'UUID')->position(2),
+                TextImportField::new('typeAction', 'Type action')->position(3),
+            ]),
+        );
+
+        self::assertSame(['UUID', 'Type action'], $preview->headers);
+        self::assertSame([
+            ['uuid', 'typeAction'],
+            ['abc', 'create'],
+        ], $preview->rows);
+        self::assertNotContains('Unknown CSV column "id" was ignored.', array_map(static fn (ImportPreviewIssue $issue): string => $issue->message, $preview->issues));
         self::assertSame([], $preview->issues);
     }
 
