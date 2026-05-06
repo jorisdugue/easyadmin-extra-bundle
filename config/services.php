@@ -10,6 +10,7 @@ use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportBatchController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportController;
 use JorisDugue\EasyAdminExtraBundle\Controller\AdminExportPreviewController;
 use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ExportActionExtension;
+use JorisDugue\EasyAdminExtraBundle\EasyAdmin\ImportActionExtension;
 use JorisDugue\EasyAdminExtraBundle\Exporter\CsvExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\JsonExporter;
 use JorisDugue\EasyAdminExtraBundle\Exporter\XlsxExporter;
@@ -31,6 +32,7 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\ExportFieldValueResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\FilenameResolver;
+use JorisDugue\EasyAdminExtraBundle\Resolver\ImportRouteMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\ActiveIndexContextResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\BatchExportRequestValidator;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\EntityMetadataResolver;
@@ -104,6 +106,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(EntitySelectionResolver::class);
     $services->set(SpreadsheetCellSanitizerService::class);
     $services->set(ExportRouteMetadataResolver::class);
+    $services->set(ImportRouteMetadataResolver::class);
 
     $services->set(AdminExportController::class)
         ->public()
@@ -134,5 +137,8 @@ return static function (ContainerConfigurator $container): void {
     $services->set(ExportCountResolver::class);
     $services->alias(ExportCountResolverInterface::class, ExportCountResolver::class);
     $services->set(ExportActionExtension::class)
+        ->tag('ea.action_extension');
+
+    $services->set(ImportActionExtension::class)
         ->tag('ea.action_extension');
 };

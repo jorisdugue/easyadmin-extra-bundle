@@ -25,6 +25,21 @@ final class CsvPreviewReaderTest extends TestCase
         self::assertSame([], $preview->issues);
     }
 
+    public function testItBuildsPreviewWithoutHeaders(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile("Alice,alice@example.com\nBob,bob@example.com\n");
+
+        $preview = $reader->preview($file, 'comma', 'UTF-8', false);
+
+        self::assertSame(['Column 1', 'Column 2'], $preview->headers);
+        self::assertSame([
+            ['Alice', 'alice@example.com'],
+            ['Bob', 'bob@example.com'],
+        ], $preview->rows);
+        self::assertSame([], $preview->issues);
+    }
+
     public function testItRejectsNonCsvExtension(): void
     {
         $reader = new CsvPreviewReader();
@@ -38,6 +53,19 @@ final class CsvPreviewReaderTest extends TestCase
         self::assertSame('Only CSV files are accepted.', $preview->issues[0]->message);
     }
 
+    public function testItRejectsUnsupportedMimeType(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile("GIF89a\n", 'users.csv', 'image/gif');
+
+        $preview = $reader->preview($file, 'comma', 'UTF-8', true);
+
+        self::assertFalse($preview->hasRows());
+        self::assertTrue($preview->hasIssues());
+        self::assertSame(ImportPreviewIssue::ERROR, $preview->issues[0]->severity);
+        self::assertSame('The uploaded file type is not accepted as CSV.', $preview->issues[0]->message);
+    }
+
     public function testItRejectsInvalidSeparator(): void
     {
         $reader = new CsvPreviewReader();
@@ -49,6 +77,31 @@ final class CsvPreviewReaderTest extends TestCase
         self::assertTrue($preview->hasIssues());
         self::assertSame(ImportPreviewIssue::ERROR, $preview->issues[0]->severity);
         self::assertSame('The selected separator is not supported.', $preview->issues[0]->message);
+    }
+
+    public function testItRejectsUnsupportedEncoding(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile("Name,Email\nAlice,alice@example.com\n");
+
+        $preview = $reader->preview($file, 'comma', 'KOI8-R', true);
+
+        self::assertFalse($preview->hasRows());
+        self::assertTrue($preview->hasIssues());
+        self::assertSame(ImportPreviewIssue::ERROR, $preview->issues[0]->severity);
+        self::assertSame('The selected encoding is not supported.', $preview->issues[0]->message);
+    }
+
+    public function testItAutoDetectsSeparatorFromBoundedSample(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile("Name;Email\nAlice;alice@example.com\n");
+
+        $preview = $reader->preview($file, 'auto', 'UTF-8', true);
+
+        self::assertSame(['Name', 'Email'], $preview->headers);
+        self::assertSame([['Alice', 'alice@example.com']], $preview->rows);
+        self::assertSame([], $preview->issues);
     }
 
     public function testItKeepsHtmlLikeValuesAsPlainValues(): void

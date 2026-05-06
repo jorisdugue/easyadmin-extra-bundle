@@ -15,15 +15,25 @@ final class JorisDugueEasyadminExtraExtension extends Extension implements Prepe
 {
     public function prepend(ContainerBuilder $container): void
     {
-        if (!$container->hasExtension('twig')) {
-            return;
+        if ($container->hasExtension('twig')) {
+            $container->prependExtensionConfig('twig', [
+                'paths' => [
+                    \dirname(__DIR__, 2) . \DIRECTORY_SEPARATOR . 'templates' => 'JorisDugueEasyAdminExtraBundle',
+                ],
+            ]);
         }
 
-        $container->prependExtensionConfig('twig', [
-            'paths' => [
-                \dirname(__DIR__, 2) . \DIRECTORY_SEPARATOR . 'templates' => 'JorisDugueEasyAdminExtraBundle',
-            ],
-        ]);
+
+        if ($container->hasExtension('framework')) {
+            $container->prependExtensionConfig('framework', [
+                'translator' => [
+                    'paths' => [
+                        \dirname(__DIR__, 2) . \DIRECTORY_SEPARATOR . 'translations',
+                    ],
+                ],
+            ]);
+        }
+    
     }
 
     /**

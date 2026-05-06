@@ -1,0 +1,29 @@
+easy_admin_extra:
+  import:
+    preview:
+      title: 'Aperçu de l''import'
+      description: 'Importez un fichier CSV afin de prévisualiser son contenu avant l''import.'
+      notice_no_persistence: 'Aucune donnée n''est enregistrée pendant la prévisualisation.'
+      validation_summary: 'Synthèse de validation'
+      metadata:
+        title: 'Métadonnées du fichier'
+        filename: 'Nom du fichier'
+        format: 'Format'
+        detected_row_count: 'Nombre de lignes détecté'
+        row_count_not_calculated: 'Non calculé pendant la prévisualisation'
+      result:
+        title: 'Prévisualisation'
+        helper: 'Seules les premières lignes sont affichées.'
+      form:
+        title: 'Importer un fichier CSV'
+        file: 'Fichier CSV'
+        separator: 'Séparateur'
+        encoding: 'Encodage'
+        headers: 'En-têtes'
+        first_row_contains_headers: 'La première ligne contient les en-têtes'
+        submit: 'Prévisualiser le CSV'
+      separator:
+        auto: 'Automatique'
+        comma: 'Virgule'
+        semicolon: 'Point-virgule'
+        tab: 'Tabulation'

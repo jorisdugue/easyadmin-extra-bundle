@@ -47,10 +47,14 @@ final class CsvPreviewReader
         }
 
         $filename = $this->sanitizeFilename($file->getClientOriginalName());
-        $encoding = $this->normalizeEncoding($encoding);
+        $encoding = $this->resolveEncoding($encoding, $issues);
 
         $this->validateUpload($file, $issues);
         if ($this->hasErrors($issues)) {
+            return new ImportPreview($filename, self::FORMAT, null, [], [], $issues);
+        }
+
+        if (null === $encoding) {
             return new ImportPreview($filename, self::FORMAT, null, [], [], $issues);
         }
 
@@ -252,7 +256,10 @@ final class CsvPreviewReader
         return $headers;
     }
 
-    private function normalizeEncoding(string $encoding): string
+    /**
+     * @param list<ImportPreviewIssue> $issues
+     */
+    private function resolveEncoding(string $encoding, array &$issues): ?string
     {
         foreach (self::ALLOWED_ENCODINGS as $allowedEncoding) {
             if (0 === strcasecmp($allowedEncoding, trim($encoding))) {
@@ -260,7 +267,9 @@ final class CsvPreviewReader
             }
         }
 
-        return 'UTF-8';
+        $issues[] = new ImportPreviewIssue(ImportPreviewIssue::ERROR, 'The selected encoding is not supported.');
+
+        return null;
     }
 
     private function sanitizeFilename(string $filename): string

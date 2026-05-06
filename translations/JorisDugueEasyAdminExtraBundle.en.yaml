@@ -1,0 +1,29 @@
+easy_admin_extra:
+  import:
+    preview:
+      title: 'Import preview'
+      description: 'Upload a CSV file to preview its content before importing.'
+      notice_no_persistence: 'No data is persisted during preview.'
+      validation_summary: 'Validation summary'
+      metadata:
+        title: 'File metadata'
+        filename: 'Filename'
+        format: 'Format'
+        detected_row_count: 'Detected row count'
+        row_count_not_calculated: 'Not calculated during preview'
+      result:
+        title: 'Preview'
+        helper: 'Only the first rows are displayed.'
+      form:
+        title: 'Upload CSV file'
+        file: 'CSV file'
+        separator: 'Separator'
+        encoding: 'Encoding'
+        headers: 'Headers'
+        first_row_contains_headers: 'First row contains headers'
+        submit: 'Preview CSV'
+      separator:
+        auto: 'Auto'
+        comma: 'Comma'
+        semicolon: 'Semicolon'
+        tab: 'Tab'
