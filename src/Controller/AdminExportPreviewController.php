@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace JorisDugue\EasyAdminExtraBundle\Controller;
 
 use JorisDugue\EasyAdminExtraBundle\Config\ExportFormat;
-use JorisDugue\EasyAdminExtraBundle\Factory\ExportConfigFactory;
 use JorisDugue\EasyAdminExtraBundle\Factory\Operation\OperationAdminContextFactory;
 use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
@@ -21,7 +20,6 @@ final class AdminExportPreviewController extends AbstractController
 {
     public function __construct(
         private readonly CrudActionNameResolver $crudActionNameResolver,
-        private readonly ExportConfigFactory $exportConfigFactory,
         private readonly ExportManager $exportManager,
         private readonly ExportRouteMetadataResolver $exportRouteMetadataResolver,
         private readonly OperationRequestMetadataResolver $operationRequestMetadataResolver,
@@ -36,15 +34,16 @@ final class AdminExportPreviewController extends AbstractController
     {
         $metadata = $this->operationRequestMetadataResolver->resolveWithoutFormat($request, 'export preview');
 
-        $config = $this->exportConfigFactory->create($metadata->crudControllerFqcn);
+        $config = $this->exportManager->resolvePreviewConfig($metadata->crudControllerFqcn, $request);
         $requestedFormat = $request->query->getString('format');
         $format = '' !== $requestedFormat
             ? ExportFormat::normalize($requestedFormat)
-            : $config->formats[0];
+            : $config->getDefaultFormat();
 
         if (!$config->supportsFormat($format)) {
             throw $this->createNotFoundException(\sprintf('The export format "%s" is not enabled for preview.', $format));
         }
+
         $context = $this->operationAdminContextFactory->createForRequest($request, $metadata, $this->crudActionNameResolver->resolve($request));
 
         $preview = $this->exportManager->preview($metadata->crudControllerFqcn, $format, $request);

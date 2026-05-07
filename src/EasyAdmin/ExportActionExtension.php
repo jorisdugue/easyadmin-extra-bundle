@@ -20,6 +20,7 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\Export\ExportSetMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRequestResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ExportRouteMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\Operation\RoleAuthorizationChecker;
+use Psr\Log\LoggerInterface;
 use ReflectionException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\RouterInterface;
@@ -39,6 +40,7 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         private ExportRouteMetadataResolver $exportRouteMetadataResolver,
         private RoleAuthorizationChecker $roleAuthorizationChecker,
         private ExportSetMetadataResolver $exportSetMetadataResolver,
+        private ?LoggerInterface $logger = null,
     ) {}
 
     /**
@@ -62,7 +64,9 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
             $this->exportSetMetadataResolver->resolveForCrud($crudControllerFqcn);
 
             return true;
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            $this->logConfigurationException($exception, $crudControllerFqcn);
+
             return false;
         }
     }
@@ -92,7 +96,9 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
                 $this->exportSetMetadataResolver->resolveForCrud($crudControllerFqcn),
                 $config,
             );
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            $this->logConfigurationException($exception, $crudControllerFqcn);
+
             return;
         }
 
@@ -344,5 +350,13 @@ final readonly class ExportActionExtension implements ActionsExtensionInterface
         }
 
         return $baseLabel;
+    }
+
+    private function logConfigurationException(Throwable $exception, ?string $crudControllerFqcn): void
+    {
+        $this->logger?->warning('Unable to configure EasyAdmin export actions.', [
+            'exception' => $exception,
+            'crud_controller' => $crudControllerFqcn,
+        ]);
     }
 }

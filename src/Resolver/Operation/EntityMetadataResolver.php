@@ -7,6 +7,7 @@ namespace JorisDugue\EasyAdminExtraBundle\Resolver\Operation;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\MappingException;
+use Doctrine\Persistence\ManagerRegistry;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 use ReflectionClass;
@@ -15,7 +16,7 @@ use ReflectionException;
 final readonly class EntityMetadataResolver
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        private ManagerRegistry $managerRegistry,
     ) {}
 
     /**
@@ -38,7 +39,7 @@ final readonly class EntityMetadataResolver
      */
     public function getClassMetadata(string $entityFqcn): ClassMetadata
     {
-        return $this->entityManager->getClassMetadata($entityFqcn);
+        return $this->getEntityManagerForClass($entityFqcn)->getClassMetadata($entityFqcn);
     }
 
     /**
@@ -68,5 +69,19 @@ final readonly class EntityMetadataResolver
         $type = $mappings['type'] ?? 'string';
 
         return \is_string($type) ? $type : 'string';
+    }
+
+    /**
+     * @param class-string<object> $entityFqcn
+     */
+    private function getEntityManagerForClass(string $entityFqcn): EntityManagerInterface
+    {
+        $manager = $this->managerRegistry->getManagerForClass($entityFqcn);
+
+        if (!$manager instanceof EntityManagerInterface) {
+            throw InvalidBatchExportException::missingEntityManager($entityFqcn);
+        }
+
+        return $manager;
     }
 }

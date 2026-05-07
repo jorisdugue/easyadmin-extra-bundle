@@ -6,9 +6,12 @@ namespace JorisDugue\EasyAdminExtraBundle\Service\Export;
 
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use JorisDugue\EasyAdminExtraBundle\Config\ExportConfig;
+use JorisDugue\EasyAdminExtraBundle\Dto\ExportContext;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPayload;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportPreview;
 use JorisDugue\EasyAdminExtraBundle\Dto\ExportSetMetadata;
+use JorisDugue\EasyAdminExtraBundle\Event\Export\AfterExportEvent;
+use JorisDugue\EasyAdminExtraBundle\Event\Export\BeforeExportEvent;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidBatchExportException;
 use JorisDugue\EasyAdminExtraBundle\Exception\InvalidExportConfigurationException;
 use JorisDugue\EasyAdminExtraBundle\Factory\Export\ExportContextFactory;
@@ -24,6 +27,7 @@ use ReflectionException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final readonly class ExportManager
 {
@@ -37,6 +41,7 @@ final readonly class ExportManager
         private ExporterRegistry $exporterRegistry,
         private ExportSetMetadataResolver $exportSetMetadataResolver,
         private RoleAuthorizationChecker $roleAuthorizationChecker,
+        private EventDispatcherInterface $eventDispatcher,
     ) {}
 
     /**
@@ -70,7 +75,7 @@ final readonly class ExportManager
             $context,
         );
 
-        return $this->createExportResponse($format, $payload);
+        return $this->createExportResponse($format, $context, $payload);
     }
 
     /**
@@ -125,6 +130,22 @@ final readonly class ExportManager
     }
 
     /**
+     * @param class-string<AbstractCrudController<object>> $crudControllerFqcn
+     *
+     * @throws ReflectionException
+     */
+    public function resolvePreviewConfig(string $crudControllerFqcn, Request $request): ExportConfig
+    {
+        [, $config] = $this->resolveAuthorizedCrudAndConfig($crudControllerFqcn, $request);
+
+        if (!$config->previewEnabled) {
+            throw new AccessDeniedException('Export preview is not enabled for this resource.');
+        }
+
+        return $config;
+    }
+
+    /**
      * Exports a manually selected set of entities identified by their IDs.
      *
      * This method is triggered by EasyAdmin batch actions. It receives the list
@@ -172,7 +193,7 @@ final readonly class ExportManager
             $context,
         );
 
-        return $this->createExportResponse($format, $payload);
+        return $this->createExportResponse($format, $context, $payload);
     }
 
     private function assertGranted(ExportConfig $config, ExportSetMetadata $setMetadata): void
@@ -212,9 +233,15 @@ final readonly class ExportManager
         return $formatLabels;
     }
 
-    private function createExportResponse(string $format, ExportPayload $payload): Response
+    private function createExportResponse(string $format, ExportContext $context, ExportPayload $payload): Response
     {
-        return $this->exporterRegistry->export($format, $payload);
+        $this->eventDispatcher->dispatch(new BeforeExportEvent($context, $payload));
+
+        $response = $this->exporterRegistry->export($format, $payload);
+
+        $this->eventDispatcher->dispatch(new AfterExportEvent($context, $payload, $response));
+
+        return $response;
     }
 
     private function toConfigExportSet(ExportSetMetadata $setMetadata): ?string

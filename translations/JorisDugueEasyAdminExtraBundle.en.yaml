@@ -1,0 +1,44 @@
+easy_admin_extra:
+  import:
+    preview:
+      title: 'Import preview'
+      description: 'Upload a CSV file to preview its content before importing.'
+      notice_no_persistence: 'No data is persisted during preview.'
+      validation_summary: 'Validation summary'
+      errors:
+        fields_resolution_failed: 'The import fields could not be resolved. Please check the import configuration.'
+        invalid_confirmation_or_expired: 'The import confirmation request is not valid or has expired. Please upload the CSV file again.'
+        no_doctrine_manager: 'No Doctrine entity manager is available for the imported entity. Check the import configuration.'
+        persistence_failed: 'The import could not be persisted. Check the application logs for details.'
+      metadata:
+        title: 'File metadata'
+        filename: 'Filename'
+        format: 'Format'
+        detected_row_count: 'Detected row count'
+        row_count_not_calculated: 'Not calculated during preview'
+      result:
+        title: 'Preview'
+        helper: 'Only the first rows are displayed.'
+      confirm:
+        title: 'Confirm import'
+        helper: 'The CSV file will be re-read and validated again before any data is persisted.'
+        submit: 'Confirm import'
+      import_result:
+        title: 'Import result'
+        success: '%count% row(s) imported successfully.'
+        failure: 'No rows were imported.'
+        row_error: 'Row %row%: %error%'
+        import_another: 'Import another CSV file'
+      form:
+        title: 'Upload CSV file'
+        file: 'CSV file'
+        separator: 'Separator'
+        encoding: 'Encoding'
+        headers: 'Headers'
+        first_row_contains_headers: 'First row contains headers'
+        submit: 'Preview CSV'
+      separator:
+        auto: 'Auto'
+        comma: 'Comma'
+        semicolon: 'Semicolon'
+        tab: 'Tab'

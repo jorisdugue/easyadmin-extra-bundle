@@ -21,6 +21,7 @@ use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
 use PHPUnit\Framework\MockObject\Exception;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 final class ExportPayloadFactoryPositionTest extends TestCase
 {
@@ -35,6 +36,7 @@ final class ExportPayloadFactoryPositionTest extends TestCase
             new FilenameResolver(),
             new ExportFieldFormatResolver(),
             new ExportCountResolver(),
+            new EventDispatcher(),
         );
     }
 
