@@ -121,13 +121,13 @@ final class ImportManagerTest extends TestCase
         $managerRegistry = $this->createMock(ManagerRegistry::class);
         $managerRegistry->method('getManagerForClass')->with(ImportManagerEntity::class)->willReturn($entityManager);
 
-        $result = new ImportManager(
+        $result = (new ImportManager(
             $storage,
             new ImportConfigFactory(),
             new ImportReaderRegistry([$reader]),
             new ImportEntityHydrator(),
             new ImportPersister($managerRegistry),
-        )->confirm($token, ImportManagerCrudController::class);
+        ))->confirm($token, ImportManagerCrudController::class);
 
         self::assertTrue($result->success);
         self::assertNotNull($reader->receivedOptions);
