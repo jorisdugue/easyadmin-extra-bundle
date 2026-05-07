@@ -6,6 +6,7 @@ namespace JorisDugue\EasyAdminExtraBundle\Tests\Service\Import;
 
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportConfig;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportPreviewIssue;
+use JorisDugue\EasyAdminExtraBundle\Dto\ImportReadOptions;
 use JorisDugue\EasyAdminExtraBundle\Field\TextImportField;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\CsvPreviewReader;
 use PHPUnit\Framework\TestCase;
@@ -19,6 +20,20 @@ final class CsvPreviewReaderTest extends TestCase
         $file = $this->createUploadedFile("Name,Email\nAlice,alice@example.com\n");
 
         $preview = $reader->preview($file, 'comma', 'UTF-8', true);
+
+        self::assertSame('users.csv', $preview->filename);
+        self::assertSame('CSV', $preview->format);
+        self::assertSame(['Name', 'Email'], $preview->headers);
+        self::assertSame([['Alice', 'alice@example.com']], $preview->rows);
+        self::assertSame([], $preview->issues);
+    }
+
+    public function testReaderInterfaceBuildsSameCsvPreviewWithHeaders(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile("Name,Email\nAlice,alice@example.com\n");
+
+        $preview = $reader->read($file, ImportReadOptions::csv('comma', 'UTF-8', true));
 
         self::assertSame('users.csv', $preview->filename);
         self::assertSame('CSV', $preview->format);
@@ -104,6 +119,21 @@ final class CsvPreviewReaderTest extends TestCase
         $file = $this->createUploadedFile("Alice,alice@example.com\nBob,bob@example.com\n");
 
         $preview = $reader->preview($file, 'comma', 'UTF-8', false);
+
+        self::assertSame(['Column 1', 'Column 2'], $preview->headers);
+        self::assertSame([
+            ['Alice', 'alice@example.com'],
+            ['Bob', 'bob@example.com'],
+        ], $preview->rows);
+        self::assertSame([], $preview->issues);
+    }
+
+    public function testReaderInterfaceKeepsNoHeaderCsvBehavior(): void
+    {
+        $reader = new CsvPreviewReader();
+        $file = $this->createUploadedFile("Alice,alice@example.com\nBob,bob@example.com\n");
+
+        $preview = $reader->read($file, ImportReadOptions::csv('comma', 'UTF-8', false));
 
         self::assertSame(['Column 1', 'Column 2'], $preview->headers);
         self::assertSame([

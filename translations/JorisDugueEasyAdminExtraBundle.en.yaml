@@ -5,6 +5,11 @@ easy_admin_extra:
       description: 'Upload a CSV file to preview its content before importing.'
       notice_no_persistence: 'No data is persisted during preview.'
       validation_summary: 'Validation summary'
+      errors:
+        fields_resolution_failed: 'The import fields could not be resolved. Please check the import configuration.'
+        invalid_confirmation_or_expired: 'The import confirmation request is not valid or has expired. Please upload the CSV file again.'
+        no_doctrine_manager: 'No Doctrine entity manager is available for the imported entity. Check the import configuration.'
+        persistence_failed: 'The import could not be persisted. Check the application logs for details.'
       metadata:
         title: 'File metadata'
         filename: 'Filename'

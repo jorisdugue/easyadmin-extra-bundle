@@ -10,10 +10,12 @@ use JorisDugue\EasyAdminExtraBundle\Resolver\CrudActionNameResolver;
 use JorisDugue\EasyAdminExtraBundle\Resolver\Operation\OperationRequestMetadataResolver;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\CsvPreviewReader;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportManager;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportReaderRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class AdminImportConfirmController extends AbstractController
 {
@@ -21,10 +23,11 @@ final class AdminImportConfirmController extends AbstractController
 
     public function __construct(
         private readonly ImportManager $importManager,
-        private readonly CsvPreviewReader $csvPreviewReader,
+        private readonly ImportReaderRegistry $importReaderRegistry,
         private readonly CrudActionNameResolver $crudActionNameResolver,
         private readonly OperationRequestMetadataResolver $operationRequestMetadataResolver,
         private readonly OperationAdminContextFactory $operationAdminContextFactory,
+        private readonly TranslatorInterface $translator,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -43,7 +46,7 @@ final class AdminImportConfirmController extends AbstractController
             return $this->redirectToPreviewWithInvalidConfirmationMessage($request);
         }
 
-        $preview = $result->preview ?? $this->csvPreviewReader->createEmptyPreview();
+        $preview = $result->preview ?? $this->importReaderRegistry->get(CsvPreviewReader::FORMAT_KEY)->createEmptyPreview();
         $temporaryFile = $result->temporaryFile;
 
         return $this->render('@JorisDugueEasyAdminExtraBundle/import/preview.html.twig', [
@@ -86,7 +89,7 @@ final class AdminImportConfirmController extends AbstractController
 
     private function redirectToPreviewWithInvalidConfirmationMessage(Request $request): RedirectResponse
     {
-        $this->addFlash('danger', 'The import confirmation request is not valid or has expired. Please upload the CSV file again.');
+        $this->addFlash('danger', $this->translator->trans('easy_admin_extra.import.preview.errors.invalid_confirmation_or_expired', domain: 'JorisDugueEasyAdminExtraBundle'));
 
         return $this->redirectToRoute($this->normalizeString($request->attributes->get('_jd_ea_extra_import_preview_route'), ''));
     }

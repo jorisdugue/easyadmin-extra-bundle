@@ -37,6 +37,7 @@ use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportEntityHydrator;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportManager;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportPersister;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportPreviewValidator;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportReaderRegistry;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\TemporaryImportStorage;
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -225,19 +226,27 @@ final class AdminImportConfirmControllerTest extends TestCase
             new ImportPreviewValidator(new ImportFieldHeaderResolver()),
             new CsvUploadValidator(),
         );
+        $importReaderRegistry = new ImportReaderRegistry([$csvPreviewReader]);
+        $translator = $this->createMock(TranslatorInterface::class);
+        $translator->method('trans')
+            ->willReturnCallback(static fn (string $id): string => match ($id) {
+                'easy_admin_extra.import.preview.errors.invalid_confirmation_or_expired' => 'The import confirmation request is not valid or has expired. Please upload the CSV file again.',
+                default => $id,
+            });
 
         $controller = new AdminImportConfirmController(
             new ImportManager(
                 $storage,
                 new ImportConfigFactory(),
-                $csvPreviewReader,
+                $importReaderRegistry,
                 new ImportEntityHydrator(),
                 new ImportPersister($managerRegistry),
             ),
-            $csvPreviewReader,
+            $importReaderRegistry,
             new CrudActionNameResolver(),
             new OperationRequestMetadataResolver(),
             $operationAdminContextFactory,
+            $translator,
         );
 
         $twig = $this->createMock(Environment::class);

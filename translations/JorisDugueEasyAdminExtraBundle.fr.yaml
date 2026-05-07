@@ -5,6 +5,11 @@ easy_admin_extra:
       description: 'Importez un fichier CSV afin de prévisualiser son contenu avant l''import.'
       notice_no_persistence: 'Aucune donnée n''est enregistrée pendant la prévisualisation.'
       validation_summary: 'Synthèse de validation'
+      errors:
+        fields_resolution_failed: 'Les champs d''import n''ont pas pu être résolus. Vérifiez la configuration de l''import.'
+        invalid_confirmation_or_expired: 'La demande de confirmation d''import n''est pas valide ou a expiré. Veuillez importer à nouveau le fichier CSV.'
+        no_doctrine_manager: 'Aucun gestionnaire Doctrine n''est disponible pour l''entité importée. Vérifiez la configuration de l''import.'
+        persistence_failed: 'L''import n''a pas pu être enregistré. Consultez les journaux de l''application pour plus de détails.'
       metadata:
         title: 'Métadonnées du fichier'
         filename: 'Nom du fichier'

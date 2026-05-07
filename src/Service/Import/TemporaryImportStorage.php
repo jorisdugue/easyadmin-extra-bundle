@@ -20,6 +20,7 @@ final class TemporaryImportStorage
         string $separator,
         string $encoding,
         bool $firstRowContainsHeaders,
+        string $format = CsvPreviewReader::FORMAT_KEY,
     ): TemporaryImportFile {
         $this->ensureDirectoryExists();
 
@@ -41,6 +42,7 @@ final class TemporaryImportStorage
 
         $metadata = [
             'createdAt' => time(),
+            'format' => $format,
             'clientFilename' => $this->sanitizeFilename($file->getClientOriginalName()),
             'crudControllerFqcn' => $crudControllerFqcn,
             'separator' => $separator,
@@ -57,7 +59,7 @@ final class TemporaryImportStorage
             throw new RuntimeException('The import confirmation metadata could not be stored.');
         }
 
-        return new TemporaryImportFile($token, $path, $metadata['clientFilename'], $crudControllerFqcn, $separator, $encoding, $firstRowContainsHeaders, $size, $sha256);
+        return new TemporaryImportFile($token, $path, $metadata['clientFilename'], $crudControllerFqcn, $separator, $encoding, $firstRowContainsHeaders, $size, $sha256, $format);
     }
 
     public function resolve(string $token, string $crudControllerFqcn): ?TemporaryImportFile
@@ -100,6 +102,7 @@ final class TemporaryImportStorage
         }
 
         $clientFilename = $metadata['clientFilename'];
+        $format = $metadata['format'] ?? CsvPreviewReader::FORMAT_KEY;
         $storedCrudControllerFqcn = $metadata['crudControllerFqcn'];
         $separator = $metadata['separator'];
         $encoding = $metadata['encoding'];
@@ -108,6 +111,7 @@ final class TemporaryImportStorage
         $sha256 = $metadata['sha256'];
         if (
             !\is_string($clientFilename)
+            || !\is_string($format)
             || !\is_string($separator)
             || !\is_string($encoding)
             || !\is_bool($firstRowContainsHeaders)
@@ -135,6 +139,7 @@ final class TemporaryImportStorage
             $firstRowContainsHeaders,
             $size,
             $sha256,
+            $format,
         );
     }
 
@@ -150,6 +155,7 @@ final class TemporaryImportStorage
 
     private function directory(): string
     {
+        // TODO: make this storage base directory configurable before adding broader import storage options.
         return rtrim(sys_get_temp_dir(), \DIRECTORY_SEPARATOR) . \DIRECTORY_SEPARATOR . self::DIRECTORY;
     }
 
@@ -223,6 +229,7 @@ final class TemporaryImportStorage
     private function hasValidOptionMetadata(array $metadata): bool
     {
         return \is_string($metadata['clientFilename'] ?? null)
+            && (!isset($metadata['format']) || \is_string($metadata['format']))
             && \is_string($metadata['crudControllerFqcn'] ?? null)
             && \is_string($metadata['separator'] ?? null)
             && \is_string($metadata['encoding'] ?? null)

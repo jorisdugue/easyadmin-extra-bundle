@@ -16,5 +16,6 @@ final readonly class TemporaryImportFile
         public bool $firstRowContainsHeaders,
         public int $size,
         public string $sha256,
+        public string $format = 'csv',
     ) {}
 }
