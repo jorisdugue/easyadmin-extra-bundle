@@ -38,7 +38,7 @@
                         {% if import_result.errors %}
                             <ul class="mb-0">
                                 {% for error in import_result.errors %}
-                                    <li>{{ error }}</li>
+                                    <li>{{ error|trans }}</li>
                                 {% endfor %}
                             </ul>
                         {% endif %}
@@ -47,7 +47,7 @@
                                 {% for row_result in import_result.rowResults %}
                                     {% if not row_result.success %}
                                         {% for error in row_result.errors %}
-                                            <li>{{ 'easy_admin_extra.import.preview.import_result.row_error'|trans({'%row%': row_result.rowNumber, '%error%': error}) }}</li>
+                                            <li>{{ 'easy_admin_extra.import.preview.import_result.row_error'|trans({'%row%': row_result.rowNumber, '%error%': error|trans}) }}</li>
                                         {% endfor %}
                                     {% endif %}
                                 {% endfor %}
@@ -142,7 +142,7 @@
                     <ul class="mb-0">
                     {% for issue in preview.issues %}
                         <li>
-                            {{ issue.message }}
+                            {{ issue.message|trans }}
                         </li>
                     {% endfor %}
                     </ul>

@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace JorisDugue\EasyAdminExtraBundle\Service\Import;
 
+use JorisDugue\EasyAdminExtraBundle\Contract\ImportReaderInterface;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportConfig;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportPreview;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportPreviewIssue;
+use JorisDugue\EasyAdminExtraBundle\Dto\ImportReadOptions;
 use JorisDugue\EasyAdminExtraBundle\Resolver\ImportFieldHeaderResolver;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
-final class CsvPreviewReader
+final class CsvPreviewReader implements ImportReaderInterface
 {
+    public const FORMAT_KEY = 'csv';
+
     private const FORMAT = 'CSV';
     private const MAX_PREVIEW_ROWS = 20;
     private const ALLOWED_ENCODINGS = [
@@ -29,6 +33,16 @@ final class CsvPreviewReader
         private ?ImportPreviewValidator $importPreviewValidator = null,
         private ?CsvUploadValidator $csvUploadValidator = null,
     ) {}
+
+    public function getFormat(): string
+    {
+        return self::FORMAT_KEY;
+    }
+
+    public function supports(string $format): bool
+    {
+        return self::FORMAT_KEY === strtolower(trim($format));
+    }
 
     public function createEmptyPreview(): ImportPreview
     {
@@ -49,6 +63,11 @@ final class CsvPreviewReader
         bool $firstRowContainsHeaders,
         ?ImportConfig $importConfig = null,
     ): ImportPreview {
+        return $this->read($file, ImportReadOptions::csv($separatorOption, $encoding, $firstRowContainsHeaders), $importConfig);
+    }
+
+    public function read(?UploadedFile $file, ImportReadOptions $options, ?ImportConfig $importConfig = null): ImportPreview
+    {
         $issues = [];
 
         if (null === $file) {
@@ -56,7 +75,7 @@ final class CsvPreviewReader
         }
 
         $filename = $this->sanitizeFilename($file->getClientOriginalName());
-        $encoding = $this->resolveEncoding($encoding, $issues);
+        $encoding = $this->resolveEncoding($options->encoding, $issues);
 
         $this->getCsvUploadValidator()->validateUpload($file, $issues);
         if ($this->hasErrors($issues)) {
@@ -67,7 +86,7 @@ final class CsvPreviewReader
             return new ImportPreview($filename, self::FORMAT, null, [], [], $issues);
         }
 
-        $separator = $this->resolveSeparator($file, $separatorOption, $issues);
+        $separator = $this->resolveSeparator($file, $options->separator, $issues);
         if (null === $separator) {
             return new ImportPreview($filename, self::FORMAT, null, [], [], $issues);
         }
@@ -92,12 +111,12 @@ final class CsvPreviewReader
             ++$physicalRow;
             $line = $this->normalizeRow($line, $encoding, $issues);
 
-            if ($physicalRow > self::MAX_PREVIEW_ROWS + ($firstRowContainsHeaders ? 1 : 0)) {
+            if ($physicalRow > self::MAX_PREVIEW_ROWS + ($options->firstRowContainsHeaders ? 1 : 0)) {
                 $issues[] = new ImportPreviewIssue(ImportPreviewIssue::WARNING, \sprintf('Only the first %d rows are shown in the preview.', self::MAX_PREVIEW_ROWS));
                 break;
             }
 
-            if ($firstRowContainsHeaders && 1 === $physicalRow) {
+            if ($options->firstRowContainsHeaders && 1 === $physicalRow) {
                 $headers = $this->normalizeHeaders($this->limitColumns($line, $issues));
                 continue;
             }
@@ -116,7 +135,7 @@ final class CsvPreviewReader
         }
 
         if (null !== $importConfig && [] !== $headers) {
-            [$headers, $rows] = $this->getImportPreviewValidator()->validate($headers, $rows, $importConfig, $firstRowContainsHeaders, $issues);
+            [$headers, $rows] = $this->getImportPreviewValidator()->validate($headers, $rows, $importConfig, $options->firstRowContainsHeaders, $issues);
         }
 
         return new ImportPreview($filename, self::FORMAT, null, $headers, $rows, $this->uniqueIssues($issues));

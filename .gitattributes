@@ -5,6 +5,9 @@
 /.gitignore export-ignore
 /phpunit.xml.dist export-ignore
 /CHANGELOG.md export-ignore
+/docs export-ignore
+/zensical.toml export-ignore
+/site export-ignore
 
 * text=auto
 *.php text eol=lf

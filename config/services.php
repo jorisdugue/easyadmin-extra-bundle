@@ -53,6 +53,7 @@ use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportEntityHydrator;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportManager;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportPersister;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportPreviewValidator;
+use JorisDugue\EasyAdminExtraBundle\Service\Import\ImportReaderRegistry;
 use JorisDugue\EasyAdminExtraBundle\Service\Import\TemporaryImportStorage;
 use JorisDugue\EasyAdminExtraBundle\Service\PropertyValueReader;
 use JorisDugue\EasyAdminExtraBundle\Service\SpreadsheetCellSanitizerService;
@@ -100,7 +101,10 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(CollectionFactoryCompat::class);
     $services->set(CsvUploadValidator::class);
-    $services->set(CsvPreviewReader::class);
+    $services->set(CsvPreviewReader::class)
+        ->tag('joris_dugue_easyadmin_extra.import_reader');
+    $services->set(ImportReaderRegistry::class)
+        ->arg('$readers', tagged_iterator('joris_dugue_easyadmin_extra.import_reader'));
     $services->set(TemporaryImportStorage::class);
     $services->set(ImportEntityHydrator::class);
     $services->set(ImportPersister::class);

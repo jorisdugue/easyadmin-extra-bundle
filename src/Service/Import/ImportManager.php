@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JorisDugue\EasyAdminExtraBundle\Service\Import;
 
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use JorisDugue\EasyAdminExtraBundle\Dto\ImportReadOptions;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportResult;
 use JorisDugue\EasyAdminExtraBundle\Dto\ImportRowResult;
 use JorisDugue\EasyAdminExtraBundle\Exception\ImportPersistenceValidationException;
@@ -17,11 +18,13 @@ use Throwable;
 final readonly class ImportManager
 {
     public const INVALID_CONFIRMATION_MESSAGE = 'The import confirmation token is missing, expired, or invalid.';
+    public const NO_MANAGER_ERROR = 'easy_admin_extra.import.preview.errors.no_doctrine_manager';
+    public const PERSISTENCE_ERROR = 'easy_admin_extra.import.preview.errors.persistence_failed';
 
     public function __construct(
         private TemporaryImportStorage $temporaryImportStorage,
         private ImportConfigFactory $importConfigFactory,
-        private CsvPreviewReader $csvPreviewReader,
+        private ImportReaderRegistry $importReaderRegistry,
         private ImportEntityHydrator $entityHydrator,
         private ImportPersister $persister,
         private ?LoggerInterface $logger = null,
@@ -39,11 +42,15 @@ final readonly class ImportManager
 
         $config = $this->importConfigFactory->create($crudControllerFqcn);
         $uploadedFile = new UploadedFile($temporaryFile->path, $temporaryFile->clientFilename, 'text/csv', null, true);
-        $preview = $this->csvPreviewReader->preview(
+        $reader = $this->importReaderRegistry->get($temporaryFile->format);
+        $preview = $reader->read(
             $uploadedFile,
-            $temporaryFile->separator,
-            $temporaryFile->encoding,
-            $temporaryFile->firstRowContainsHeaders,
+            new ImportReadOptions(
+                $temporaryFile->format,
+                $temporaryFile->separator,
+                $temporaryFile->encoding,
+                $temporaryFile->firstRowContainsHeaders,
+            ),
             $config,
         );
 
@@ -101,10 +108,10 @@ final readonly class ImportManager
     private function resolvePersistenceErrorMessage(Throwable $exception): string
     {
         if ($exception instanceof RuntimeException && str_starts_with($exception->getMessage(), 'No Doctrine entity manager is available')) {
-            return 'No Doctrine entity manager is available for the imported entity. Check the import configuration.';
+            return self::NO_MANAGER_ERROR;
         }
 
-        return 'The import could not be persisted. Check the application logs for details.';
+        return self::PERSISTENCE_ERROR;
     }
 
     /**

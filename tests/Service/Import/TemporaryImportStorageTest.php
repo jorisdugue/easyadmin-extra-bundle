@@ -20,6 +20,7 @@ final class TemporaryImportStorageTest extends TestCase
         try {
             self::assertFileExists($temporaryFile->path);
             self::assertSame('users.csv', $temporaryFile->clientFilename);
+            self::assertSame('csv', $temporaryFile->format);
             self::assertSame(ProductCrudController::class, $temporaryFile->crudControllerFqcn);
             self::assertSame('comma', $temporaryFile->separator);
             self::assertSame('UTF-8', $temporaryFile->encoding);
@@ -31,6 +32,7 @@ final class TemporaryImportStorageTest extends TestCase
             self::assertNotNull($resolved);
             self::assertSame($temporaryFile->token, $resolved->token);
             self::assertSame($temporaryFile->path, $resolved->path);
+            self::assertSame('csv', $resolved->format);
             self::assertSame($temporaryFile->size, $resolved->size);
             self::assertSame($temporaryFile->sha256, $resolved->sha256);
         } finally {
