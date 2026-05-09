@@ -1,7 +1,7 @@
 [project]
 site_name = "EasyAdmin Extra Bundle"
 site_description = "Export and CSV import tools for EasyAdmin 5 applications."
-repo_url = "https://github.com/JorisDugue/EasyAdminExtraBundle"
+repo_url = "https://github.com/jorisdugue/easyadmin-extra-bundle"
 docs_dir = "docs"
 site_dir = "site"
 nav = [
