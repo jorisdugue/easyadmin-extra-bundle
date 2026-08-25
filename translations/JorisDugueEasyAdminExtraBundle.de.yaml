@@ -1,0 +1,44 @@
+easy_admin_extra:
+  import:
+    preview:
+      title: 'Importvorschau'
+      description: 'Laden Sie eine CSV-Datei hoch, um den Inhalt vor dem Import anzuzeigen.'
+      notice_no_persistence: 'Während der Vorschau werden keine Daten dauerhaft gespeichert.'
+      validation_summary: 'Zusammenfassung Vorschau'
+      errors:
+        fields_resolution_failed: 'Die Importfelder konnten nicht aufgelöst werden. Bitte überprüfen Sie die Importkonfiguration.'
+        invalid_confirmation_or_expired: 'Die Importbestätigung ist ungültig oder abgelaufen. Bitte laden Sie die CSV-Datei erneut hoch.'
+        no_doctrine_manager: 'Für die importierte Entität ist kein Doctrine-Entity-Manager verfügbar. Überprüfen Sie die Importkonfiguration.'
+        persistence_failed: 'Der Import konnte nicht gespeichert werden. Überprüfen Sie die Anwendungsprotokolle auf Einzelheiten.'
+      metadata:
+        title: 'Datei-Metadaten'
+        filename: 'Dateiname'
+        format: 'Format'
+        detected_row_count: 'Ermittelte Zeilenanzahl'
+        row_count_not_calculated: 'Wird während der Vorschau nicht berechnet'
+      result:
+        title: 'Vorschau'
+        helper: 'Nur die ersten Zeilen werden angezeigt.'
+      confirm:
+        title: 'Import bestätigen'
+        helper: 'Die CSV-Datei wird erneut eingelesen und validiert, bevor Daten dauerhaft gespeichert werden.'
+        submit: 'Import bestätigen'
+      import_result:
+        title: 'Importergebnis'
+        success: '%count% Zeile(n) erfolgreich importiert.'
+        failure: 'Es wurden keine Zeilen importiert.'
+        row_error: 'Zeile %row%: %error%'
+        import_another: 'Andere CSV-Datei importieren'
+      form:
+        title: 'CSV-Datei hochladen'
+        file: 'CSV-Datei'
+        separator: 'Trennzeichen'
+        encoding: 'Codierung'
+        headers: 'Kopfzeilen'
+        first_row_contains_headers: 'Die erste Zeile enthält Kopfzeilen'
+        submit: 'CSV Vorschau'
+      separator:
+        auto: 'Auto'
+        comma: 'Komma'
+        semicolon: 'Semikolon'
+        tab: 'Tabulator'
